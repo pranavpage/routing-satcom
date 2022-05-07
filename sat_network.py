@@ -92,16 +92,24 @@ def plot_constellation(sats, dir_sats):
     coordinates = np.zeros((len(sats), 3))
     for i in range(len(sats)):
         coordinates[i,:] = [sats[i].x, sats[i].y, sats[i].z]
-    fig = plt.figure()
+    fig = plt.figure(0)
     ax = fig.gca(projection = '3d')
     ax.set_xlim3d(-R, R)
     ax.set_ylim3d(-R, R)
     ax.set_zlim3d(-R, R)
-    ax.scatter(coordinates[:,0],coordinates[:,1],coordinates[:,2], c = dir_sats)
+    ax.scatter(coordinates[:,0],coordinates[:,1],coordinates[:,2], c = dir_sats, alpha = 0.2)
     return coordinates
 planes, sats, dir_sats = initialize_constellation(alt, P, num_sats, inclination)
+def plot_path(nodes_list, coords):
+    for node in nodes_list:
+        [p1, s1] = node 
+        node_coords = coords[num_sats*p1 + s1, :]
+        fig = plt.figure(0)
+        ax = fig.gca(projection = '3d') 
+        ax.scatter(node_coords[0], node_coords[1], node_coords[2], c = 'red')
+    return 0
 print(inclination)
-#coords = plot_constellation(sats, dir_sats)
+coords = plot_constellation(sats, dir_sats)
 #plt.savefig("sat_constellation_vp.png")
 #plt.show()
 
@@ -217,7 +225,7 @@ def direction_enhancement(p1, s1, p2, s2):
 # add 4 buffers to satellites
 
 #testing routing
-np.random.seed(10)
+np.random.seed(5)
 p1, p2 = np.random.randint(0, P, 2)
 s1, s2 = np.random.randint(0, num_sats, 2) 
 print(direction_estimation(11,20, 11, 8))
@@ -225,6 +233,7 @@ print(s_to_lat(19), s_to_lat(8))
 print(f"testing ({p1} , {s1}) -> ({p2}, {s2})")
 pkt = packet(p1, s1, p2, s2, 0)
 i=0
+nodes_list = []
 while(pkt.p1 != p2 or pkt.s1 != s2):
     path_enhanced = direction_enhancement(pkt.p1, pkt.s1, pkt.p2, pkt.s2)
     print(path_enhanced)
@@ -242,6 +251,11 @@ while(pkt.p1 != p2 or pkt.s1 != s2):
             pkt.s1 = (pkt.s1 + num_sats)%num_sats
             pkt.hops +=1
     print(pkt)
+    node = [pkt.p1, pkt.s1]
+    nodes_list.append(node)
+plot_path(nodes_list, coords=coords)
+plt.savefig("path_routed.png")
+plt.show()
 ## Routing works!!
 
     
