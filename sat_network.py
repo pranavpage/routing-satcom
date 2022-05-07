@@ -1,4 +1,5 @@
 from cmath import polar
+from selectors import EpollSelector
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -12,6 +13,20 @@ inclination = 90
 R = 6.378e6
 G = 6.674e-11
 M = 5.972e24
+polar_region_boundary = 75
+def sat_in_polar_region(s, polar_region_boundary = polar_region_boundary):
+    polar_angle = s*360/num_sats
+    theta = 90 - polar_region_boundary
+    # 0 to 360
+    # (0, theta), (180 - theta, 180 + theta), (360 - theta, 360)
+    if(polar_angle>=0 and polar_angle<=theta):
+        return 1
+    elif(polar_angle >= 180 - theta and polar_angle <= 180 + theta):
+        return 1
+    elif(polar_angle >= 360 - theta and polar_angle <= 360):
+        return 1
+    else:
+        return 0
 class orbital_plane:
     def __init__(self, h, longitude, inclination, num_sats):
         self.h = h
@@ -27,7 +42,7 @@ class orbital_plane:
 	'%.2f'%self.num_sats,
 	'%.2f'%(self.period/3600))
 class satellite:
-    def __init__(self, h, plane_idx, sat_idx, polar_angle) -> None:
+    def __init__(self, h, plane_idx, sat_idx, polar_angle):
         self.h = h
         self.plane_idx = plane_idx
         self.sat_idx = sat_idx 
@@ -44,6 +59,11 @@ class packet:
         self.s2 = s2
         self.hops = 0
         self.t_origin = t
+#def condition_6(p1, s1, p2, s2, )
+def s_to_lat(s):
+    polar_angle = s*num_sats/360
+    lat = abs(180 - polar_angle) - 90
+    return lat
 def initialize_constellation(alt, P, num_sats, inclination):
     planes = [] 
     sats = []
@@ -94,8 +114,10 @@ class min_path:
         self.nv = nv 
         self.nh = nh 
         self.hops = 0
+        self.primary = [0, 0]
+        self.secondary = [0, 0]
     def __repr__(self):
-        return f"dv={self.dv}, dh={self.dh}, nv={self.nv}, nh={self.nh}, hops={self.hops} \n"
+        return f"dv={self.dv}, dh={self.dh}, nv={self.nv}, nh={self.nh}, hops={self.hops}, primary={self.primary}, secondary = {self.secondary} \n"
 def direction_estimation(p1, s1, p2, s2):
     ph = min_path(0,0,0,0)
     pv = min_path(0,0,0,0)
@@ -146,7 +168,47 @@ def direction_estimation(p1, s1, p2, s2):
         
         pv.nh = abs(p1 - p2)
         pv.nv = min(abs(s1-s2), num_sats - abs(s1-s2))
-        pv.hops = pv.nv + pv.nh        
-    return ph, pv
-ph, pv = direction_estimation(2, 8, 5, 6)
-print(ph, pv)
+        pv.hops = pv.nv + pv.nh
+    if(pv.hops == min(pv.hops, ph.hops)):
+        return pv
+    else:
+        return ph
+[p1, s1, p2, s2] = [7, 3, 5, 6]
+path_test = direction_estimation(p1, s1, p2, s2)
+print(path_test)
+def direction_enhancement(p1, s1, p2, s2):
+    path_de = direction_estimation(p1, s1, p2, s2)
+    if(sat_in_polar_region(s1)):
+        #hop in same plane
+        if(path_de.dv):
+            path_de.primary=[0, path_de.dv]
+            path_de.dh = 0
+        else:
+            if(s1 < num_sats/4 or s1 > 3*num_sats/4):
+                path_de.primary = [0, -1]
+            else:
+                path_de.primary = [0, 1]
+            path_de.dh = 0
+    elif(sat_in_polar_region(s1+1) or sat_in_polar_region(s1-1)):
+        if(path_de.dh):
+            path_de.primary = [path_de.dh, 0]
+            if(path_de.dv):
+                path_de.secondary = [0, path_de.dv]
+        else:
+            path_de.primary = [0, path_de.dv]
+    else:
+        #condition on nh (6)
+        if(s_to_lat(s1) > s_to_lat(s2)):
+            if(path_de.dh):
+                path_de.primary = [path_de.dh, 0]
+            else:
+                path_de.primary = [0, path_de.dv]
+        elif(s_to_lat(s1) < s_to_lat(s2)):
+            path_de.primary = [0, path_de.dv]
+        else:
+            path_de.primary = [path_de.dh, 0]
+            
+        
+    return path_de 
+path_enhanced = direction_enhancement(p1, s1, p2, s2)
+print(path_enhanced)
