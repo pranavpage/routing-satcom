@@ -59,6 +59,8 @@ class packet:
         self.s2 = s2
         self.hops = 0
         self.t_origin = t
+    def __repr__(self):
+        return f"({self.p1} , {self.s1}) -> ({self.p2}, {self.s2}), hops = {self.hops}"
 #def condition_6(p1, s1, p2, s2, )
 def s_to_lat(s):
     polar_angle = s*num_sats/360
@@ -160,26 +162,25 @@ def direction_estimation(p1, s1, p2, s2):
         if(s1 < num_sats/2 and s2 >= num_sats/2):
             #1 East, 2 West
             pv.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
-            pv.dv = (-1)*(2*(s1-s2) < num_sats) + (+1)*(2*(s1-s2) >= num_sats)
+            pv.dv = (-1)*(2*(s2-s1) < num_sats) + (+1)*(2*(s2-s1) >= num_sats)
         elif(s1 >= num_sats/2 and s2 < num_sats/2):
             #1 West, 2 East
             pv.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
             pv.dv = (+1)*(2*(s1-s2) < num_sats) + (-1)*(2*(s1-s2) >= num_sats)
-        
+            print("1w2e")
         pv.nh = abs(p1 - p2)
         pv.nv = min(abs(s1-s2), num_sats - abs(s1-s2))
         pv.hops = pv.nv + pv.nh
+        print(pv)
     if(pv.hops == min(pv.hops, ph.hops)):
         return pv
     else:
         return ph
-[p1, s1, p2, s2] = [7, 3, 5, 6]
-path_test = direction_estimation(p1, s1, p2, s2)
-print(path_test)
 def direction_enhancement(p1, s1, p2, s2):
     path_de = direction_estimation(p1, s1, p2, s2)
     if(sat_in_polar_region(s1)):
         #hop in same plane
+        print("polar")
         if(path_de.dv):
             path_de.primary=[0, path_de.dv]
             path_de.dh = 0
@@ -208,7 +209,39 @@ def direction_enhancement(p1, s1, p2, s2):
         else:
             path_de.primary = [path_de.dh, 0]
             
+            
         
     return path_de 
-path_enhanced = direction_enhancement(p1, s1, p2, s2)
-print(path_enhanced)
+
+# integrate with constellation 
+# add 4 buffers to satellites
+
+#testing routing
+np.random.seed(10)
+p1, p2 = np.random.randint(0, P, 2)
+s1, s2 = np.random.randint(0, num_sats, 2) 
+print(direction_estimation(11,20, 11, 8))
+print(s_to_lat(19), s_to_lat(8))
+print(f"testing ({p1} , {s1}) -> ({p2}, {s2})")
+pkt = packet(p1, s1, p2, s2, 0)
+i=0
+while(pkt.p1 != p2 or pkt.s1 != s2):
+    path_enhanced = direction_enhancement(pkt.p1, pkt.s1, pkt.p2, pkt.s2)
+    print(path_enhanced)
+    if(path_enhanced.primary[0]):
+        pkt.p1 += path_enhanced.primary[0]
+        pkt.p1 = (pkt.p1 + P)%P
+        pkt.hops +=1
+    else:
+        if(pkt.s1 >= num_sats/2 or pkt.s1 ==0):
+            pkt.s1 -= path_enhanced.primary[1]
+            pkt.s1 = (pkt.s1 + num_sats)%num_sats
+            pkt.hops +=1
+        else :
+            pkt.s1 -= path_enhanced.primary[1]
+            pkt.s1 = (pkt.s1 + num_sats)%num_sats
+            pkt.hops +=1
+    print(pkt)
+## Routing works!!
+
+    
