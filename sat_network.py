@@ -88,28 +88,35 @@ def initialize_constellation(alt, P, num_sats, inclination):
             sats[i].z = (alt + R)*(np.cos(phi)*np.cos(delta))
             i+=1
     return planes, sats, dir_sats
-def plot_constellation(sats, dir_sats):
+def plot_constellation(sats, dir_sats, num):
     coordinates = np.zeros((len(sats), 3))
     for i in range(len(sats)):
         coordinates[i,:] = [sats[i].x, sats[i].y, sats[i].z]
-    fig = plt.figure(0)
+    fig = plt.figure(num)
     ax = fig.gca(projection = '3d')
     ax.set_xlim3d(-R, R)
     ax.set_ylim3d(-R, R)
     ax.set_zlim3d(-R, R)
-    ax.scatter(coordinates[:,0],coordinates[:,1],coordinates[:,2], c = dir_sats, alpha = 0.2)
+    ax.scatter(coordinates[:,0],coordinates[:,1],coordinates[:,2], c = dir_sats, alpha = 0.5, s=3**2)
     return coordinates
 planes, sats, dir_sats = initialize_constellation(alt, P, num_sats, inclination)
-def plot_path(nodes_list, coords):
+def plot_path(nodes_list, coords, num):
+    i=0
+    len_nodes = len(nodes_list)
     for node in nodes_list:
         [p1, s1] = node 
         node_coords = coords[num_sats*p1 + s1, :]
-        fig = plt.figure(0)
+        fig = plt.figure(num)
         ax = fig.gca(projection = '3d') 
-        ax.scatter(node_coords[0], node_coords[1], node_coords[2], c = 'red')
+        if(i>0 and i!= len_nodes-1):
+            ax.scatter(node_coords[0], node_coords[1], node_coords[2], c = 'red', s=5**2)
+        elif(i!=len_nodes-1):
+            ax.scatter(node_coords[0], node_coords[1], node_coords[2], c = 'green', s=5**2)
+        else:
+            ax.scatter(node_coords[0], node_coords[1], node_coords[2], c = 'blue', s=5**2)
+        i+=1
     return 0
 print(inclination)
-coords = plot_constellation(sats, dir_sats)
 #plt.savefig("sat_constellation_vp.png")
 #plt.show()
 
@@ -225,37 +232,41 @@ def direction_enhancement(p1, s1, p2, s2):
 # add 4 buffers to satellites
 
 #testing routing
-np.random.seed(5)
-p1, p2 = np.random.randint(0, P, 2)
-s1, s2 = np.random.randint(0, num_sats, 2) 
-print(direction_estimation(11,20, 11, 8))
-print(s_to_lat(19), s_to_lat(8))
-print(f"testing ({p1} , {s1}) -> ({p2}, {s2})")
-pkt = packet(p1, s1, p2, s2, 0)
-i=0
-nodes_list = []
-while(pkt.p1 != p2 or pkt.s1 != s2):
-    path_enhanced = direction_enhancement(pkt.p1, pkt.s1, pkt.p2, pkt.s2)
-    print(path_enhanced)
-    if(path_enhanced.primary[0]):
-        pkt.p1 += path_enhanced.primary[0]
-        pkt.p1 = (pkt.p1 + P)%P
-        pkt.hops +=1
-    else:
-        if(pkt.s1 >= num_sats/2 or pkt.s1 ==0):
-            pkt.s1 -= path_enhanced.primary[1]
-            pkt.s1 = (pkt.s1 + num_sats)%num_sats
+for j in range(5):
+    np.random.seed(14+j)
+    coords = plot_constellation(sats, dir_sats, j)
+    p1, p2 = np.random.randint(0, P, 2)
+    s1, s2 = np.random.randint(0, num_sats, 2) 
+    print(direction_estimation(11,20, 11, 8))
+    print(s_to_lat(19), s_to_lat(8))
+    print(f"testing ({p1} , {s1}) -> ({p2}, {s2})")
+    pkt = packet(p1, s1, p2, s2, 0)
+    i=0
+    nodes_list = []
+    while(pkt.p1 != p2 or pkt.s1 != s2):
+        path_enhanced = direction_enhancement(pkt.p1, pkt.s1, pkt.p2, pkt.s2)
+        print(path_enhanced)
+        if(path_enhanced.primary[0]):
+            pkt.p1 += path_enhanced.primary[0]
+            if(pkt.p1 == P):
+                pkt.s1 = (num_sats - s1)
+            pkt.p1 = (pkt.p1 + P)%P
             pkt.hops +=1
-        else :
-            pkt.s1 -= path_enhanced.primary[1]
-            pkt.s1 = (pkt.s1 + num_sats)%num_sats
-            pkt.hops +=1
-    print(pkt)
-    node = [pkt.p1, pkt.s1]
-    nodes_list.append(node)
-plot_path(nodes_list, coords=coords)
-plt.savefig("path_routed.png")
-plt.show()
-## Routing works!!
+        else:
+            if(pkt.s1 >= num_sats/2 or pkt.s1 ==0):
+                pkt.s1 -= path_enhanced.primary[1]
+                pkt.s1 = (pkt.s1 + num_sats)%num_sats
+                pkt.hops +=1
+            else :
+                pkt.s1 -= path_enhanced.primary[1]
+                pkt.s1 = (pkt.s1 + num_sats)%num_sats
+                pkt.hops +=1
+        print(pkt)
+        node = [pkt.p1, pkt.s1]
+        nodes_list.append(node)
+    plot_path(nodes_list, coords=coords, num=j)
+    plt.savefig(f"path_routed_{j}.png")
+    print(j)
+# Routing works!!
 
     
