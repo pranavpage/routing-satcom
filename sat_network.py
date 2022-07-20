@@ -1,8 +1,6 @@
-from cmath import polar
-from selectors import EpollSelector
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+#from mpl_toolkits.mplot3d import Axes3D
 #need to build a satellite network with nodes and (lat, long)
 alt = 600e3 #600 km above the earth
 P = 12 #number of orbital planes
@@ -135,99 +133,187 @@ class min_path:
         self.secondary = [0, 0]
     def __repr__(self):
         return f"dv={self.dv}, dh={self.dh}, nv={self.nv}, nh={self.nh}, hops={self.hops}, primary={self.primary}, secondary = {self.secondary} \n"
-def direction_estimation(p1, s1, p2, s2):
+def horizontal_hop(p1, s1, p2, s2):
+    # decision criterion for staying in horizontal ring or moving up/down
+    return 0
+def direction_estimation(p1, s1, p2, s2, dmap='dra'):
     ph = min_path(0,0,0,0)
     pv = min_path(0,0,0,0)
-    if(s1 < num_sats/2 and s2 < num_sats/2):
-        #Eastern Hemisphere
-        ph.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
-        ph.dv = (-1)*(s1 < s2) + (+1)*(s1 > s2)
-        ph.nv = abs(s1 - s2)
-        ph.nh = abs(p1 - p2)
-        ph.hops = ph.nv + ph.nh
-        
-        pv.dh = (-1)*(p1 < p2) + (+1)*(p1 >= p2)
-        pv.dv = (+1)*(2*(s1+s2+1) < num_sats) + (-1)*(2*(s1+s2+1) > num_sats) + (+1)*(2*(s1+s2+1) == num_sats)
-        pv.nh = (P - abs(p1-p2))
-        pv.nv = min((s1 + s2 + 1), num_sats - (s1 + s2 + 1))
-        pv.hops = pv.nv + pv.nh
-        pass
-    elif(s1 >= num_sats/2 and s2 >= num_sats/2):
-        #Western Hemisphere
-        ph.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
-        ph.dv = (-1)*(s1 < s2) + (+1)*(s1 > s2)
-        ph.nv = abs(s1 - s2)
-        ph.nh = abs(p1 - p2)
-        ph.hops = ph.nv + ph.nh
-        
-        pv.dh = (-1)*(p1 < p2) + (+1)*(p1 >= p2)
-        pv.dv = (+1)*(2*(s1+s2+1) < 3*num_sats) + (-1)*(2*(s1+s2+1) >= 3*num_sats)
-        pv.nh = (P - abs(p1-p2))
-        pv.nv = min((s1 + s2 + 1) - num_sats,2*num_sats - (s1 + s2 + 1))
-        pv.hops = pv.nv + pv.nh
-        pass
-    else:
-        #Different sides of the seam
-        ph.dh = (-1)*(p1 < p2) + (+1)*(p1 > p2)
-        ph.dv = (+1)*((num_sats - 1 - s1) < s2) + (-1)*((num_sats - 1 - s1) > s2)
-        ph.nv = abs(num_sats-s1 - s2-1)
-        ph.nh = abs(p1 - p2) + num_sats
-        ph.hops = ph.nv + ph.nh
-        
-        if(s1 < num_sats/2 and s2 >= num_sats/2):
-            #1 East, 2 West
-            pv.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
-            pv.dv = (-1)*(2*(s2-s1) < num_sats) + (+1)*(2*(s2-s1) >= num_sats)
-        elif(s1 >= num_sats/2 and s2 < num_sats/2):
-            #1 West, 2 East
-            pv.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
-            pv.dv = (+1)*(2*(s1-s2) < num_sats) + (-1)*(2*(s1-s2) >= num_sats)
-            print("1w2e")
-        pv.nh = abs(p1 - p2)
-        pv.nv = min(abs(s1-s2), num_sats - abs(s1-s2))
-        pv.hops = pv.nv + pv.nh
-        print(pv)
-    if(pv.hops == min(pv.hops, ph.hops)):
-        return pv
-    else:
-        return ph
-def direction_enhancement(p1, s1, p2, s2):
-    path_de = direction_estimation(p1, s1, p2, s2)
-    if(sat_in_polar_region(s1)):
-        #hop in same plane
-        print("polar")
-        if(path_de.dv):
-            path_de.primary=[0, path_de.dv]
-            path_de.dh = 0
+    if(dmap=='dra'):
+        if(s1 < num_sats/2 and s2 < num_sats/2):
+            #Eastern Hemisphere
+            ph.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
+            ph.dv = (-1)*(s1 < s2) + (+1)*(s1 > s2)
+            ph.nv = abs(s1 - s2)
+            ph.nh = abs(p1 - p2)
+            ph.hops = ph.nv + ph.nh
+            
+            pv.dh = (-1)*(p1 < p2) + (+1)*(p1 >= p2)
+            pv.dv = (+1)*(2*(s1+s2+1) < num_sats) + (-1)*(2*(s1+s2+1) > num_sats) + (+1)*(2*(s1+s2+1) == num_sats)
+            pv.nh = (P - abs(p1-p2))
+            pv.nv = min((s1 + s2 + 1), num_sats - (s1 + s2 + 1))
+            pv.hops = pv.nv + pv.nh
+            pass
+        elif(s1 >= num_sats/2 and s2 >= num_sats/2):
+            #Western Hemisphere
+            ph.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
+            ph.dv = (-1)*(s1 < s2) + (+1)*(s1 > s2)
+            ph.nv = abs(s1 - s2)
+            ph.nh = abs(p1 - p2)
+            ph.hops = ph.nv + ph.nh
+            
+            pv.dh = (-1)*(p1 < p2) + (+1)*(p1 >= p2)
+            pv.dv = (+1)*(2*(s1+s2+1) < 3*num_sats) + (-1)*(2*(s1+s2+1) >= 3*num_sats)
+            pv.nh = (P - abs(p1-p2))
+            pv.nv = min((s1 + s2 + 1) - num_sats,2*num_sats - (s1 + s2 + 1))
+            pv.hops = pv.nv + pv.nh
+            pass
         else:
-            if(s1 < num_sats/4 or s1 > 3*num_sats/4):
-                path_de.primary = [0, -1]
-            else:
-                path_de.primary = [0, 1]
-            path_de.dh = 0
-    elif(sat_in_polar_region(s1+1) or sat_in_polar_region(s1-1)):
-        if(path_de.dh):
-            path_de.primary = [path_de.dh, 0]
+            #Different sides of the seam
+            ph.dh = (-1)*(p1 < p2) + (+1)*(p1 > p2)
+            ph.dv = (+1)*((num_sats - 1 - s1) < s2) + (-1)*((num_sats - 1 - s1) > s2)
+            ph.nv = abs(num_sats-s1 - s2-1)
+            ph.nh = abs(p1 - p2) + num_sats
+            ph.hops = ph.nv + ph.nh
+            
+            if(s1 < num_sats/2 and s2 >= num_sats/2):
+                #1 East, 2 West
+                pv.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
+                pv.dv = (-1)*(2*(s2-s1) < num_sats) + (+1)*(2*(s2-s1) >= num_sats)
+            elif(s1 >= num_sats/2 and s2 < num_sats/2):
+                #1 West, 2 East
+                pv.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
+                pv.dv = (+1)*(2*(s1-s2) < num_sats) + (-1)*(2*(s1-s2) >= num_sats)
+                print("1w2e")
+            pv.nh = abs(p1 - p2)
+            pv.nv = min(abs(s1-s2), num_sats - abs(s1-s2))
+            pv.hops = pv.nv + pv.nh
+            print(pv)
+        if(pv.hops == min(pv.hops, ph.hops)):
+            return pv
+        else:
+            return ph
+    elif(dmap=='improvement'):
+        if((s1<num_sats/2)*(s2<num_sats/2) or (s1>=num_sats/2)*(s2>=num_sats/2)):
+            # Same hemisphere
+            # don't go polar
+            ph.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
+            ph.dv = (-1)*(s1 < s2) + (+1)*(s1 > s2)
+            ph.nv = abs(s1 - s2)
+            ph.nh = abs(p1 - p2)
+            ph.hops = ph.nv + ph.nh
+            print("ph")
+            return ph
+        else:
+            # Different hemispheres
+            # go polar
+            if(s1 < num_sats/2 and s2 >= num_sats/2):
+                #1 East, 2 West
+                pv.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
+                pv.dv = (-1)*(2*(s2-s1) < num_sats) + (+1)*(2*(s2-s1) >= num_sats)
+            elif(s1 >= num_sats/2 and s2 < num_sats/2):
+                #1 West, 2 East
+                pv.dh = (+1)*(p1 < p2) + (-1)*(p1 > p2)
+                pv.dv = (+1)*(2*(s1-s2) < num_sats) + (-1)*(2*(s1-s2) >= num_sats)
+            pv.nh = abs(p1 - p2)
+            pv.nv = min(abs(s1-s2), num_sats - abs(s1-s2))
+            pv.hops = pv.nv + pv.nh
+            print("pv")
+            return pv
+            
+def direction_enhancement(p1, s1, p2, s2, dmap='dra'):
+    path_de = direction_estimation(p1, s1, p2, s2, dmap)
+    if(dmap=='dra'):
+        if(sat_in_polar_region(s1)):
+            #hop in same plane
+            print("polar")
             if(path_de.dv):
-                path_de.secondary = [0, path_de.dv]
-        else:
-            path_de.primary = [0, path_de.dv]
-    else:
-        #condition on nh (6)
-        if(s_to_lat(s1) > s_to_lat(s2)):
+                path_de.primary=[0, path_de.dv]
+                path_de.dh = 0
+            else:
+                if(s1 < num_sats/4 or s1 > 3*num_sats/4):
+                    path_de.primary = [0, -1]
+                else:
+                    path_de.primary = [0, 1]
+                path_de.dh = 0
+        elif(sat_in_polar_region(s1+1) or sat_in_polar_region(s1-1)):
             if(path_de.dh):
                 path_de.primary = [path_de.dh, 0]
+                if(path_de.dv):
+                    path_de.secondary = [0, path_de.dv]
             else:
                 path_de.primary = [0, path_de.dv]
-        elif(s_to_lat(s1) < s_to_lat(s2)):
-            path_de.primary = [0, path_de.dv]
         else:
-            path_de.primary = [path_de.dh, 0]
-            
-            
-        
-    return path_de 
-
+            #condition on nh (6)
+            if(s_to_lat(s1) > s_to_lat(s2)):
+                if(path_de.dh):
+                    path_de.primary = [path_de.dh, 0]
+                else:
+                    path_de.primary = [0, path_de.dv]
+            elif(s_to_lat(s1) < s_to_lat(s2)):
+                path_de.primary = [0, path_de.dv]
+            else:
+                path_de.primary = [path_de.dh, 0]
+        return path_de
+    elif(dmap=='improvement'):
+        if(sat_in_polar_region(s1)):
+            # (1) polar region
+            print("polar")
+            if(path_de.dv):
+                # not in same ring
+                if(sat_in_polar_region(s2)):
+                    # both in polar, dv!=0
+                    if((s1<num_sats/2)*(s2<num_sats/2) or (s1>=num_sats/2)*(s2>=num_sats/2)):
+                        # both in polar, dv!=0, same hemisphere
+                        # go out
+                        if(s1 < num_sats/4 or s1 > 3*num_sats/4):
+                            path_de.primary = [0, -1]
+                        else:
+                            path_de.primary = [0, 1]
+                    else:
+                        # both in polar, dv!=0, different hemisphere
+                        # mark dv primary
+                        # dh zero
+                        path_de.primary=[0, path_de.dv]
+                        path_de.dh = 0
+                        pass
+                else:
+                    # s2 not in polar, dv!=0
+                    # mark dv primary
+                    # dh zero
+                    path_de.primary=[0, path_de.dv]
+                    path_de.dh = 0
+                    pass
+            else:
+                # dv==0
+                # go outside
+                if(s1 < num_sats/4 or s1 > 3*num_sats/4):
+                    path_de.primary = [0, -1]
+                else:
+                    path_de.primary = [0, 1]
+                pass
+        elif(sat_in_polar_region(s1+1) or sat_in_polar_region(s1-1)):
+            # (2) last horizontal ring
+            if(path_de.dh):
+                path_de.primary = [path_de.dh, 0]
+                if(path_de.dv):
+                    path_de.secondary = [0, path_de.dv]
+            else:
+                path_de.primary = [0, path_de.dv]
+            pass
+        else:
+            # (3) middle of the net 
+            if((s1<num_sats/2)*(s2<num_sats/2) or (s1>=num_sats/2)*(s2>=num_sats/2)):
+                # same hemisphere
+                # implement condition 8
+                pass
+            else:
+                # diff hemispheres
+                # go polar
+                path_de.primary = [0, path_de.dv]
+                if(path_de.dh):
+                    path_de.secondary = [path_de.dh, 0]
+        return path_de
 # integrate with constellation 
 # add 4 buffers to satellites
 
