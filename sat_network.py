@@ -12,8 +12,16 @@ R = 6.378e6
 G = 6.674e-11
 M = 5.972e24
 polar_region_boundary = 75
+theta_intra_plane = 360.0/num_sats
+theta_inter_plane = 180.0/P
+l_intra_plane = R*np.sqrt(2*(1-np.cos(np.radians(theta_intra_plane))))
+l_alpha = R*np.sqrt(2*(1-np.cos(np.radians(theta_inter_plane))))
+print(f"Number of orbital planes = {P}, sats per plane = {num_sats}")
+print(f"Inter plane angle : {theta_inter_plane:.2f}")
+print(f"Intra plane angle : {theta_intra_plane:.2f}")
+print(f"Polar Region bdry : {polar_region_boundary}")
 def sat_in_polar_region(s, polar_region_boundary = polar_region_boundary):
-    polar_angle = s*360/num_sats
+    polar_angle = s*360.0/num_sats
     theta = 90 - polar_region_boundary
     # 0 to 360
     # (0, theta), (180 - theta, 180 + theta), (360 - theta, 360)
@@ -61,7 +69,7 @@ class packet:
         return f"({self.p1} , {self.s1}) -> ({self.p2}, {self.s2}), hops = {self.hops}"
 #def condition_6(p1, s1, p2, s2, )
 def s_to_lat(s):
-    polar_angle = s*num_sats/360
+    polar_angle = s*360/num_sats
     lat = abs(180 - polar_angle) - 90
     return lat
 def initialize_constellation(alt, P, num_sats, inclination):
@@ -135,7 +143,61 @@ class min_path:
         return f"dv={self.dv}, dh={self.dh}, nv={self.nv}, nh={self.nh}, hops={self.hops}, primary={self.primary}, secondary = {self.secondary} \n"
 def horizontal_hop(p1, s1, p2, s2):
     # decision criterion for staying in horizontal ring or moving up/down
-    return 0
+    # condition 8 in paper
+    lat_1 = s_to_lat(s1)
+    lat_2 = s_to_lat(s2)
+    long_1 = p1*theta_inter_plane
+    long_2 = p2*theta_inter_plane
+    print(f"Source lat : {lat_1:.2f}, Source long : {long_1:.2f}\n Destination lat : {lat_2:.2f}, Destination long : {long_2:.2f}")
+    if(abs(lat_1)<abs(lat_2)):
+        print("Move to ring of destination")
+        d_v = (+1)*(lat_1<lat_2) + (-1)*(lat_1>lat_2)
+        d_h = (+1)*(p1<p2) + (-1)*(p1>p2)
+        return [[0, d_v], [d_h, 0]]
+    else:
+        print("Run Min calc")
+        # |lat_1| > |lat_2|
+        # min hops to closest polar region 
+        if(lat_1>=0):
+            # go north
+            max_hops = int(np.floor((polar_region_boundary - lat_1)*num_sats/360.0))
+            print(f"Hops to last satellite = {max_hops}")
+            hops_list = np.arange(1, max_hops+1, 1)
+            th_list = hops_list*(2*l_intra_plane/l_alpha)/(np.cos(np.radians(lat_1)) - np.cos(np.radians(lat_1 + hops_list*theta_intra_plane)))
+            print(th_list)
+            n_h = abs(p1-p2)
+            print(n_h)
+            if(n_h < min(th_list)):
+                print("Same ring")
+                d_h = +1*(p1<p2) + (-1)*(p1>=p2)
+                d_v = +1
+                print(d_h)
+                return [[d_h, 0], [0, d_v]]
+            else:
+                print("Go towards pole")
+                d_v = +1
+                d_h = (+1)*(p1<p2) + (-1)*(p1>=p2)
+                return [[0, d_v], [d_h, 0]]
+        else:
+            # go south
+            max_hops = int(np.floor(-(-polar_region_boundary - lat_1)*num_sats/360.0))
+            print(f"Hops to last satellite = {max_hops}")
+            hops_list = np.arange(1, max_hops+1, 1)
+            th_list = hops_list*(2*l_intra_plane/l_alpha)/(np.cos(np.radians(lat_1)) - np.cos(np.radians(lat_1 - hops_list*theta_intra_plane)))
+            print(th_list)
+            n_h = abs(p1-p2)
+            print(n_h)
+            if(n_h < min(th_list)):
+                print("Same ring")
+                d_h = +1*(p1<p2) + (-1)*(p1>=p2)
+                d_v = -1
+                print(d_h)
+                return [[d_h, 0], [0, d_v]]
+            else:
+                print("Go towards pole")
+                d_v = -1
+                d_h = (+1)*(p1<p2) + (-1)*(p1>=p2)
+                return [[0, d_v], [d_h, 0]]
 def direction_estimation(p1, s1, p2, s2, dmap='dra'):
     ph = min_path(0,0,0,0)
     pv = min_path(0,0,0,0)
@@ -294,6 +356,7 @@ def direction_enhancement(p1, s1, p2, s2, dmap='dra'):
                 pass
         elif(sat_in_polar_region(s1+1) or sat_in_polar_region(s1-1)):
             # (2) last horizontal ring
+            print("Last horizontal ring")
             if(path_de.dh):
                 path_de.primary = [path_de.dh, 0]
                 if(path_de.dv):
@@ -303,9 +366,13 @@ def direction_enhancement(p1, s1, p2, s2, dmap='dra'):
             pass
         else:
             # (3) middle of the net 
+            print("Middle of the net")
             if((s1<num_sats/2)*(s2<num_sats/2) or (s1>=num_sats/2)*(s2>=num_sats/2)):
                 # same hemisphere
                 # implement condition 8
+                ret = horizontal_hop(p1, s1, p2, s2)
+                path_de.primary = ret[0]
+                path_de.secondary = ret[1]
                 pass
             else:
                 # diff hemispheres
@@ -318,41 +385,52 @@ def direction_enhancement(p1, s1, p2, s2, dmap='dra'):
 # add 4 buffers to satellites
 
 #testing routing
-for j in range(5):
-    np.random.seed(14+j)
-    coords = plot_constellation(sats, dir_sats, j)
-    p1, p2 = np.random.randint(0, P, 2)
-    s1, s2 = np.random.randint(0, num_sats, 2) 
-    print(direction_estimation(11,20, 11, 8))
-    print(s_to_lat(19), s_to_lat(8))
-    print(f"testing ({p1} , {s1}) -> ({p2}, {s2})")
-    pkt = packet(p1, s1, p2, s2, 0)
-    i=0
-    nodes_list = []
-    while(pkt.p1 != p2 or pkt.s1 != s2):
-        path_enhanced = direction_enhancement(pkt.p1, pkt.s1, pkt.p2, pkt.s2)
-        print(path_enhanced)
-        if(path_enhanced.primary[0]):
-            pkt.p1 += path_enhanced.primary[0]
-            if(pkt.p1 == P):
-                pkt.s1 = (num_sats - s1)
-            pkt.p1 = (pkt.p1 + P)%P
-            pkt.hops +=1
-        else:
-            if(pkt.s1 >= num_sats/2 or pkt.s1 ==0):
-                pkt.s1 -= path_enhanced.primary[1]
-                pkt.s1 = (pkt.s1 + num_sats)%num_sats
-                pkt.hops +=1
-            else :
-                pkt.s1 -= path_enhanced.primary[1]
-                pkt.s1 = (pkt.s1 + num_sats)%num_sats
-                pkt.hops +=1
-        print(pkt)
-        node = [pkt.p1, pkt.s1]
-        nodes_list.append(node)
-    plot_path(nodes_list, coords=coords, num=j)
-    plt.savefig(f"path_routed_{j}.png")
-    print(j)
+# for j in range(5):
+#     np.random.seed(14+j)
+#     coords = plot_constellation(sats, dir_sats, j)
+#     p1, p2 = np.random.randint(0, P, 2)
+#     s1, s2 = np.random.randint(0, num_sats, 2) 
+#     print(direction_estimation(11,20, 11, 8))
+#     print(s_to_lat(19), s_to_lat(8))
+#     print(f"testing ({p1} , {s1}) -> ({p2}, {s2})")
+#     pkt = packet(p1, s1, p2, s2, 0)
+#     i=0
+#     nodes_list = []
+#     while(pkt.p1 != p2 or pkt.s1 != s2):
+#         path_enhanced = direction_enhancement(pkt.p1, pkt.s1, pkt.p2, pkt.s2)
+#         print(path_enhanced)
+#         if(path_enhanced.primary[0]):
+#             pkt.p1 += path_enhanced.primary[0]
+#             if(pkt.p1 == P):
+#                 pkt.s1 = (num_sats - s1)
+#             pkt.p1 = (pkt.p1 + P)%P
+#             pkt.hops +=1
+#         else:
+#             if(pkt.s1 >= num_sats/2 or pkt.s1 ==0):
+#                 pkt.s1 -= path_enhanced.primary[1]
+#                 pkt.s1 = (pkt.s1 + num_sats)%num_sats
+#                 pkt.hops +=1
+#             else :
+#                 pkt.s1 -= path_enhanced.primary[1]
+#                 pkt.s1 = (pkt.s1 + num_sats)%num_sats
+#                 pkt.hops +=1
+#         print(pkt)
+#         node = [pkt.p1, pkt.s1]
+#         nodes_list.append(node)
+#     plot_path(nodes_list, coords=coords, num=j)
+#     plt.savefig(f"path_routed_{j}.png")
+#     print(j)
+p1 = 1
+p2 = 10
+s1 = 9
+s2 = 2
+lat_1 = s_to_lat(s1)
+lat_2 = s_to_lat(s2)
+long_1 = p1*theta_inter_plane
+long_2 = p2*theta_inter_plane
+print(f"Source lat : {lat_1:.2f}, Source long : {long_1:.2f}\nDestination lat : {lat_2:.2f}, Destination long : {long_2:.2f}")
+ret = direction_enhancement(p1, s1, p2, s2, 'improvement')
+print(ret)
 # Routing works!!
 
     
