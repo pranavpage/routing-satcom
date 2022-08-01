@@ -26,6 +26,7 @@ print(f"Inter plane angle : {theta_inter_plane:.2f}")
 print(f"Intra plane angle : {theta_intra_plane:.2f}")
 print(f"Polar Region bdry : {polar_region_boundary}")
 event_queue = []
+completed_packets = []
 t = 0
 algo_type = 'dra'
 class min_path:
@@ -81,18 +82,18 @@ def go_polar(p1, s1, p2, s2, path_de):
         k = max_hops+s_min
         th_list = (P*np.cos(np.radians(lat_min)) + (l_intra_plane/l_alpha)*(2*(k-hops_list)+1))/(np.cos(np.radians(lat_1 + hops_list*theta_intra_plane)) + np.cos(np.radians(lat_min)))
         if(nh>max(th_list) and nh>0):
-            print("cross polar region (condition 6)")
+            # print("cross polar region (condition 6)")
             return 1
         elif(nh>0):
-            print("don't cross polar region")
+            # print("don't cross polar region")
             return 0
         else:
-            print("nh==0")
+            # print("nh==0")
             return 0
 def horizontal_hop(p1, s1, p2, s2, path_de):
     # decision criterion for staying in horizontal ring or moving up/down
     # condition 8 in paper
-    print("Horizontal Hop func")
+    # print("Horizontal Hop func")
     lat_1 = s_to_lat(s1)
     lat_2 = s_to_lat(s2)
     long_1 = ps_to_long(p1, s1)
@@ -108,23 +109,23 @@ def horizontal_hop(p1, s1, p2, s2, path_de):
     #         d_v = (+1)*(lat_1<lat_2) + (-1)*(lat_1>lat_2)
     #         d_h = (+1)*(long_1<long_2) + (-1)*(long_1>long_2)
     # else:
-    print("Run Min calc")
+    # print("Run Min calc")
     # |lat_1| > |lat_2|
     # min hops to closest polar region 
     if(lat_1>=0):
         # go north
         max_hops = int(np.floor((polar_region_boundary - lat_1)*num_sats/360.0))
-        print(f"Hops to last satellite = {max_hops}")
+        # print(f"Hops to last satellite = {max_hops}")
         hops_list = np.arange(1, max_hops+1, 1)
         th_list = hops_list*(2*l_intra_plane/l_alpha)/(np.cos(np.radians(lat_1)) - np.cos(np.radians(lat_1 + hops_list*theta_intra_plane)))
         n_h = path_de.nh
         if(n_h < min(th_list) and n_h>0):
-            print("Same ring")
+            # print("Same ring")
             # d_h = (+1)*(long_1<long_2) + (-1)*(long_1>long_2)
             # d_v = +1
             return [[path_de.dh, 0], [0, path_de.dv]]
         elif(n_h>0):
-            print("Go towards pole")
+            # print("Go towards pole")
             # d_v = +1
             # d_h = (+1)*(long_1<long_2) + (-1)*(long_1>long_2)
             if(long_1>0):
@@ -135,22 +136,22 @@ def horizontal_hop(p1, s1, p2, s2, path_de):
                 d_v = -1
             return [[0, d_v], [path_de.dh, 0]]
         else:
-            print("Same plane")
+            # print("Same plane")
             return [[0, path_de.dv], [path_de.dh, 0]]
     else:
         # go south
         max_hops = int(np.floor(-(-polar_region_boundary - lat_1)*num_sats/360.0))
-        print(f"Hops to last satellite = {max_hops}")
+        # print(f"Hops to last satellite = {max_hops}")
         hops_list = np.arange(1, max_hops+1, 1)
         th_list = hops_list*(2*l_intra_plane/l_alpha)/(np.cos(np.radians(lat_1)) - np.cos(np.radians(lat_1 - hops_list*theta_intra_plane)))
         n_h = path_de.nh
         if(n_h < min(th_list) and n_h > 0):
-            print("Same ring")
+            # print("Same ring")
             # d_h = (+1)*(long_1<long_2) + (-1)*(long_1>long_2)
             # d_v = -1
             return [[path_de.dh, 0], [0, path_de.dv]]
         elif(n_h>0):
-            print("Go towards pole")
+            # print("Go towards pole")
             # d_v = -1
             # d_h = (+1)*(long_1<long_2) + (-1)*(long_1>long_2)
             if(long_1>0):
@@ -161,7 +162,7 @@ def horizontal_hop(p1, s1, p2, s2, path_de):
                 d_v = +1
             return [[0, d_v], [path_de.dh, 0]]
         else:
-            print("Same plane")
+            # print("Same plane")
             return [[0, path_de.dv], [path_de.dh, 0]]
 def direction_estimation(p1, s1, p2, s2):
     ph = min_path(0,0,0,0)
@@ -226,10 +227,10 @@ def direction_enhancement(p1, s1, p2, s2):
     lat_2 = s_to_lat(s2)
     if(sat_in_polar_region(s1)):
         #hop in same plane
-        print("(1) polar")
+        # print("(1) polar")
         if(sat_in_polar_region(s2) and ((lat_1>0 and lat_2>0) or (lat_1<0 and lat_2<0))):
             # both in same polar region
-            print("same polar region")
+            # print("same polar region")
             if(path_de.dh):
                 # go out
                 if(s1 < num_sats/4 or (s1 >= num_sats/2 and s1<3*num_sats/4)):
@@ -248,7 +249,7 @@ def direction_enhancement(p1, s1, p2, s2):
             path_de.primary=[0, path_de.dv]
             path_de.dh = 0
     elif(sat_in_polar_region(s1+1) or sat_in_polar_region(s1-1)):
-        print("(2) last horizontal ring")
+        # print("(2) last horizontal ring")
         if(path_de.dh):
             path_de.primary = [path_de.dh, 0]
             if(path_de.dv):
@@ -257,7 +258,7 @@ def direction_enhancement(p1, s1, p2, s2):
             path_de.primary = [0, path_de.dv]
     else:
         #condition on nh (6)
-        print("(3) Middle of the net")
+        # print("(3) Middle of the net")
         # if(s_to_lat(s1) > s_to_lat(s2)):
         #     if(path_de.dh):
         #         path_de.primary = [path_de.dh, 0]
@@ -279,7 +280,6 @@ def direction_enhancement(p1, s1, p2, s2):
             # use horizontal hop
             ret = horizontal_hop(p1, s1, p2, s2, path_de)
             path_de.primary = ret[0]
-            print(ret)
             path_de.secondary = ret[1]
             pass
     return path_de
@@ -333,6 +333,7 @@ class packet:
         self.next_hop_s = s1
         self.t_origin = t
         self.prop_delay = 0
+        self.delay = 0
     def __repr__(self):
         return f"({self.p1} , {self.s1}) -> ({self.p2}, {self.s2}), hops = {self.hops}, next hop = ({self.next_hop_p}, {self.next_hop_s})\n"
 class event:
@@ -365,6 +366,7 @@ class event:
                 event_queue.append(event(t_transmit, self.packet, 'departure'))
                 source_node.queue.append(self.packet)
             else:
+                completed_packets.append(self.packet)
                 pass
                 # popping must be taken care of outside
             # TBD : extract traffic info from header and store in node
@@ -396,7 +398,7 @@ def event_handler():
 # def gen_pkts():
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
-for t_arrival in [0]:
+for t_arrival in [0, 1]:
     pkt = packet(3, 22, 6, 16, t_arrival)
     evnt = event(t_arrival, pkt, 'arrival')
     event_queue.append(evnt)
@@ -404,3 +406,4 @@ for t_arrival in [0]:
 
 while(event_queue):
     event_handler()
+print(f"Completed packets : {completed_packets}")
