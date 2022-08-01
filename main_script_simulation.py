@@ -1,8 +1,6 @@
 #main_script_simulation.py
 # Combines des_simulator.py with the routing strategy developed in sat_network.py
-# Simulator for testing algorithms
 # Discrete Event Simulator
-#from sat_network import orbital_plane, satellite
 import numpy as np
 alt = 600e3
 P = 12
@@ -11,11 +9,16 @@ inclination = 90
 R = 6.378e6
 G = 6.674e-11
 M = 5.972e24
+c = 2.998e8
+packet_size = 2**(16+3) #in bits
+tx_rate = 1e9 # in bits/s
+transmit_delay = packet_size/tx_rate
+print(f"Transmit delay = {transmit_delay:e}")
 polar_region_boundary = 75
 theta_intra_plane = 360.0/num_sats
 theta_inter_plane = 180.0/P
-l_intra_plane = R*np.sqrt(2*(1-np.cos(np.radians(theta_intra_plane))))
-l_alpha = R*np.sqrt(2*(1-np.cos(np.radians(theta_inter_plane))))
+l_intra_plane = (R+alt)*np.sqrt(2*(1-np.cos(np.radians(theta_intra_plane))))
+l_alpha = (R+alt)*np.sqrt(2*(1-np.cos(np.radians(theta_inter_plane))))
 s_min = np.floor((90 - polar_region_boundary)/theta_intra_plane)+1
 
 print(f"Number of orbital planes = {P}, sats per plane = {num_sats}")
@@ -23,7 +26,6 @@ print(f"Inter plane angle : {theta_inter_plane:.2f}")
 print(f"Intra plane angle : {theta_intra_plane:.2f}")
 print(f"Polar Region bdry : {polar_region_boundary}")
 event_queue = []
-transmit_delay = 1
 t = 0
 algo_type = 'dra'
 class min_path:
@@ -303,6 +305,7 @@ class node:
             path_enhanced = direction_enhancement(self.p, self.s, packet.p2, packet.s2)
             print("ROUTE")
             if(path_enhanced.primary[0]):
+                # Horizontal
                 old_p = self.p
                 new_p = old_p + path_enhanced.primary[0]
                 new_p = (new_p+P)%P
@@ -310,10 +313,14 @@ class node:
                     packet.next_hop_s = num_sats - self.s
                 packet.next_hop_p = new_p
                 packet.hops+=1
+                packet.prop_delay = l_alpha*np.cos(np.radians(s_to_lat(self.s)))/c
             else:
+                # Vertical
                 packet.next_hop_s = self.s- path_enhanced.primary[1]
                 packet.next_hop_s = (packet.next_hop_s + num_sats)%num_sats
                 packet.hops +=1
+                packet.prop_delay = l_intra_plane/c
+            print(f"Propagation delay = {packet.prop_delay:e}")
         return packet
 class packet:
     def __init__(self, p1, s1, p2, s2, t):
@@ -325,6 +332,7 @@ class packet:
         self.next_hop_p = p1
         self.next_hop_s = s1
         self.t_origin = t
+        self.prop_delay = 0
     def __repr__(self):
         return f"({self.p1} , {self.s1}) -> ({self.p2}, {self.s2}), hops = {self.hops}, next hop = ({self.next_hop_p}, {self.next_hop_s})\n"
 class event:
@@ -338,7 +346,7 @@ class event:
         self.packet = packet
         self.event_type = event_type
     def __repr__(self):
-        return f"Event {self.event_type} at time {self.t_exec}, {self.packet}"
+        return f"Event {self.event_type} at time {self.t_exec:e}, {self.packet}"
     def execute(self):
         '''Executed when it's the earliest event in the queue'''
         # Check event type
@@ -365,7 +373,7 @@ class event:
             # Generates an arrival event for the next hop node 
             # Need to find propagation delay between two nodes
             source_node = nodes[self.packet.p1*num_sats+self.packet.s1]
-            prop_delay = propagation_delay(self.packet.p1, self.packet.s1, self.packet.next_hop_p, self.packet.next_hop_p) # TBD
+            prop_delay = self.packet.prop_delay # TBD
             t_arrival = self.t_exec + 1*transmit_delay + prop_delay
             event_queue.append(event(t_arrival, self.packet, 'arrival'))
             source_node.queue.pop(0)
@@ -379,8 +387,6 @@ def initialize_constellation(alt, P, num_sats, inclination = 90):
         for s in range(num_sats):
             nodes.append(node(p, s))
     return nodes
-def propagation_delay(p1, s1, p2, s2):
-    return 5
 def event_handler():
     t_exec_array = np.array([evnt.t_exec for evnt in event_queue])
     next_idx = np.argmin(t_exec_array)
@@ -390,8 +396,8 @@ def event_handler():
 # def gen_pkts():
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
-for t_arrival in [1.2]:
-    pkt = packet(3, 22, 6, 16, 0)
+for t_arrival in [0]:
+    pkt = packet(3, 22, 6, 16, t_arrival)
     evnt = event(t_arrival, pkt, 'arrival')
     event_queue.append(evnt)
     event_handler()
