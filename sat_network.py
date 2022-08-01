@@ -512,7 +512,7 @@ def direction_enhancement(p1, s1, p2, s2, dmap='dra'):
 if(__name__=='__main__'):
     failures = []
     #testing routing
-    for j in range(10000):
+    for j in range(1):
         np.random.seed(j)
         plot_constellation(sats, dir_sats, j)
         p1, p2 = np.random.randint(0, P, 2)
