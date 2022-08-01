@@ -159,7 +159,7 @@ def plot_path(nodes_list, num):
     #         ax.scatter(node_coords[0], node_coords[1], node_coords[2], c = 'blue', s=5**2)
     #     i+=1
     return 0
-print(inclination)
+#print(inclination)
 #plt.savefig("sat_constellation_vp.png")
 #plt.show()
 
@@ -509,63 +509,64 @@ def direction_enhancement(p1, s1, p2, s2, dmap='dra'):
         return path_de
 # integrate with constellation 
 # add 4 buffers to satellites
-failures = []
-#testing routing
-for j in range(10000):
-    np.random.seed(j)
-    plot_constellation(sats, dir_sats, j)
-    p1, p2 = np.random.randint(0, P, 2)
-    s1, s2 = np.random.randint(0, num_sats, 2)
-    # p1 = 6
-    # p2 = 6
-    # s1 = 22
-    # s2 = 16
-    lat_1 = s_to_lat(s1)
-    lat_2 = s_to_lat(s2)
-    long_1 = ps_to_long(p1, s1)
-    long_2 = ps_to_long(p2, s2)
-    print(f"Start ({p1} , {s1}) -> ({p2}, {s2})")
-    print(f"Source lat : {lat_1:.2f}, Source long : {long_1:.2f}\nDestination lat : {lat_2:.2f}, Destination long : {long_2:.2f}")
-    #ret = direction_enhancement(p1, s1, p2, s2, 'dra')
-    #print(ret) 
-    print(f"testing ({p1} , {s1}) -> ({p2}, {s2})")
-    pkt = packet(p1, s1, p2, s2, 0)
-    i=0
-    nodes_list = []
-    nodes_list.append([p1, s1])
-    while(pkt.p1 != p2 or pkt.s1 != s2):
-        print("Packet to be forwarded")
-        print(pkt)
-        path_enhanced = direction_enhancement(pkt.p1, pkt.s1, pkt.p2, pkt.s2, 'dra')
-        print("----")
-        print(path_enhanced)
-        if(path_enhanced.primary[0]):
-            old_p = pkt.p1
-            new_p = old_p+path_enhanced.primary[0]
-            new_p = (new_p+P)%P
-            if((old_p == 0 and new_p == P-1) or (old_p == P-1 and new_p == 0)):
-                pkt.s1 = num_sats - pkt.s1
-            pkt.p1 = new_p
-            pkt.hops +=1
-        else:
-            pkt.s1 -= path_enhanced.primary[1]
-            pkt.s1 = (pkt.s1 + num_sats)%num_sats
-            pkt.hops +=1
-        if(pkt.hops>50):
-            print("*"*10)
-            print("Alert")
-            print("*"*10)
-            failures.append(j)
-            break
-        node = [pkt.p1, pkt.s1]
-        nodes_list.append(node)
-    # plot_path(nodes_list, num=j)
-    # plt.title(f"({p1}, {s1})->({p2}, {s2}), {pkt.hops} hops")
-    # plt.legend(bbox_to_anchor=(0.75,1.25), loc="upper left")
-    # plt.savefig(f"images/new_path_routed_{j}.png")
-    print(nodes_list)
-    print(f"Seed={j}")
-print(f"Failures = {failures}")
+if(__name__=='__main__'):
+    failures = []
+    #testing routing
+    for j in range(10000):
+        np.random.seed(j)
+        plot_constellation(sats, dir_sats, j)
+        p1, p2 = np.random.randint(0, P, 2)
+        s1, s2 = np.random.randint(0, num_sats, 2)
+        # p1 = 6
+        # p2 = 6
+        # s1 = 22
+        # s2 = 16
+        lat_1 = s_to_lat(s1)
+        lat_2 = s_to_lat(s2)
+        long_1 = ps_to_long(p1, s1)
+        long_2 = ps_to_long(p2, s2)
+        print(f"Start ({p1} , {s1}) -> ({p2}, {s2})")
+        print(f"Source lat : {lat_1:.2f}, Source long : {long_1:.2f}\nDestination lat : {lat_2:.2f}, Destination long : {long_2:.2f}")
+        #ret = direction_enhancement(p1, s1, p2, s2, 'dra')
+        #print(ret) 
+        print(f"testing ({p1} , {s1}) -> ({p2}, {s2})")
+        pkt = packet(p1, s1, p2, s2, 0)
+        i=0
+        nodes_list = []
+        nodes_list.append([p1, s1])
+        while(pkt.p1 != p2 or pkt.s1 != s2):
+            print("Packet to be forwarded")
+            print(pkt)
+            path_enhanced = direction_enhancement(pkt.p1, pkt.s1, pkt.p2, pkt.s2, 'dra')
+            print("----")
+            print(path_enhanced)
+            if(path_enhanced.primary[0]):
+                old_p = pkt.p1
+                new_p = old_p+path_enhanced.primary[0]
+                new_p = (new_p+P)%P
+                if((old_p == 0 and new_p == P-1) or (old_p == P-1 and new_p == 0)):
+                    pkt.s1 = num_sats - pkt.s1
+                pkt.p1 = new_p
+                pkt.hops +=1
+            else:
+                pkt.s1 -= path_enhanced.primary[1]
+                pkt.s1 = (pkt.s1 + num_sats)%num_sats
+                pkt.hops +=1
+            if(pkt.hops>50):
+                print("*"*10)
+                print("Alert")
+                print("*"*10)
+                failures.append(j)
+                break
+            node = [pkt.p1, pkt.s1]
+            nodes_list.append(node)
+        # plot_path(nodes_list, num=j)
+        # plt.title(f"({p1}, {s1})->({p2}, {s2}), {pkt.hops} hops")
+        # plt.legend(bbox_to_anchor=(0.75,1.25), loc="upper left")
+        # plt.savefig(f"images/new_path_routed_{j}.png")
+        print(nodes_list)
+        print(f"Seed={j}")
+    print(f"Failures = {failures}")
 
 # Routing works!!
 
