@@ -303,7 +303,7 @@ class node:
             packet.hops+=1
         elif(algo_type=='dra'):
             path_enhanced = direction_enhancement(self.p, self.s, packet.p2, packet.s2)
-            print("ROUTE")
+            # print("ROUTE")
             if(path_enhanced.primary[0]):
                 # Horizontal
                 old_p = self.p
@@ -320,7 +320,7 @@ class node:
                 packet.next_hop_s = (packet.next_hop_s + num_sats)%num_sats
                 packet.hops +=1
                 packet.prop_delay = l_intra_plane/c
-            print(f"Propagation delay = {packet.prop_delay:e}")
+            # print(f"Propagation delay = {packet.prop_delay:e}")
         return packet
 class packet:
     def __init__(self, p1, s1, p2, s2, t):
@@ -334,8 +334,10 @@ class packet:
         self.t_origin = t
         self.prop_delay = 0
         self.delay = 0
+        self.origin_p = p1
+        self.origin_s = s1
     def __repr__(self):
-        return f"({self.p1} , {self.s1}) -> ({self.p2}, {self.s2}), hops = {self.hops}, next hop = ({self.next_hop_p}, {self.next_hop_s})\n"
+        return f"({self.origin_p} , {self.origin_s}) -> ({self.p2}, {self.s2}), hops = {self.hops}, next hop = ({self.next_hop_p}, {self.next_hop_s})\n"
 class event:
     def __init__(self, t_exec, packet, event_type):
         '''
@@ -361,11 +363,13 @@ class event:
             if(not (self.packet.s1 == self.packet.s2 and self.packet.p1 == self.packet.p2)):
                 self.packet = source_node.route(self.packet)
                 # Schedules the packet for transmission, according to queue
+                source_node.queue.append(self.packet)
                 t_transmit = self.t_exec + len(source_node.queue)*transmit_delay # TBD : gives the queue length at the node 
                 # Creates event
                 event_queue.append(event(t_transmit, self.packet, 'departure'))
-                source_node.queue.append(self.packet)
+                # print(source_node.queue)
             else:
+                self.packet.delay = t - self.packet.t_origin
                 completed_packets.append(self.packet)
                 pass
                 # popping must be taken care of outside
@@ -381,7 +385,7 @@ class event:
             source_node.queue.pop(0)
         else: 
             return -1
-        print(self)
+        # print(self)
         return 
 def initialize_constellation(alt, P, num_sats, inclination = 90):
     nodes = []
@@ -398,12 +402,22 @@ def event_handler():
 # def gen_pkts():
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
-for t_arrival in [0, 1]:
-    pkt = packet(3, 22, 6, 16, t_arrival)
+lamda = 15.625 #packets/s
+num_packets = 10
+(p1, s1) = (2,5)
+(p2, s2) = (4,10)
+np.random.seed(0)
+inter_arrival_times = np.random.exponential(1/lamda, num_packets)
+arrival_times = np.cumsum(inter_arrival_times)
+for t_arrival in arrival_times:
+    # p2 = np.random.randint(0, P)
+    # s2 = np.random.randint(0, num_sats)
+    pkt = packet(p1, s1, p2, s2, t_arrival)
     evnt = event(t_arrival, pkt, 'arrival')
     event_queue.append(evnt)
     event_handler()
 
 while(event_queue):
     event_handler()
-print(f"Completed packets : {completed_packets}")
+for pkt in completed_packets:
+    print(f"{pkt.t_origin*1e3:.2f} ms, {pkt.delay*1e3:.2f} ms")
