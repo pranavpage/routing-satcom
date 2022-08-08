@@ -10,9 +10,10 @@ R = 6.378e6
 G = 6.674e-11
 M = 5.972e24
 c = 2.998e8
-packet_size = 2**(16+3) #in bits
+packet_size = 2**(10+3) #in bits
 tx_rate = 1e9 # in bits/s
 transmit_delay = packet_size/tx_rate
+print(f"Packet size = {packet_size/8:.2e} bytes")
 print(f"Transmit delay = {transmit_delay:e}")
 polar_region_boundary = 75
 theta_intra_plane = 360.0/num_sats
@@ -227,7 +228,7 @@ def direction_enhancement(p1, s1, p2, s2):
     lat_2 = s_to_lat(s2)
     if(sat_in_polar_region(s1)):
         #hop in same plane
-        # print("(1) polar")
+        print("(1) polar")
         if(sat_in_polar_region(s2) and ((lat_1>0 and lat_2>0) or (lat_1<0 and lat_2<0))):
             # both in same polar region
             # print("same polar region")
@@ -248,8 +249,9 @@ def direction_enhancement(p1, s1, p2, s2):
         else:
             path_de.primary=[0, path_de.dv]
             path_de.dh = 0
+        path_de.secondary = path_de.primary
     elif(sat_in_polar_region(s1+1) or sat_in_polar_region(s1-1)):
-        # print("(2) last horizontal ring")
+        print("(2) last horizontal ring")
         if(path_de.dh):
             path_de.primary = [path_de.dh, 0]
             if(path_de.dv):
@@ -258,7 +260,7 @@ def direction_enhancement(p1, s1, p2, s2):
             path_de.primary = [0, path_de.dv]
     else:
         #condition on nh (6)
-        # print("(3) Middle of the net")
+        print("(3) Middle of the net")
         # if(s_to_lat(s1) > s_to_lat(s2)):
         #     if(path_de.dh):
         #         path_de.primary = [path_de.dh, 0]
@@ -282,8 +284,30 @@ def direction_enhancement(p1, s1, p2, s2):
             path_de.primary = ret[0]
             path_de.secondary = ret[1]
             pass
+    print(path_de)
     return path_de
-
+def give_neighbours(p, s):
+    # give the four neighbours of (p,s) in [[right, left], [up, down]] format
+    neighbours = [[], []]
+    # right 
+    right_p = (p+1+P)%P
+    right_s = s
+    if((p==P-1 and right_p==0)):
+        right_s = num_sats - s
+    neighbours[0].append([right_p, right_s])
+    # left
+    left_p = (p-1+P)%P
+    left_s = s
+    if((p==0 and right_p==P-1)):
+        left_s = num_sats - s
+    neighbours[0].append([left_p, left_s])
+    # up 
+    up_s  = (s-1+num_sats)%num_sats
+    neighbours[1].append([p, up_s])
+    # down 
+    down_s  = (s+1+num_sats)%num_sats
+    neighbours[1].append([p, down_s])
+    return neighbours
 class node:
     def __init__(self, p, s):
         self.p = p
@@ -293,6 +317,8 @@ class node:
         self.polar_angle = 360*s/num_sats
         self.queue_time = [[0,0]]
         self.average_queue_length = 0
+        self.neighbour_queue_lengths = [[-1,-1],[-1,-1]] # [[right, left], [up, down]]
+        self.neighbours = give_neighbours(p,s)
     def __repr__(self):
         return f"({self.p}, {self.s}, {len(self.queue)} packets)\n"
     
@@ -337,6 +363,8 @@ class packet:
         self.delay = 0
         self.origin_p = p1
         self.origin_s = s1
+        self.hdr = 0
+        self.pkt_type = 'data' # 'data' vs 'state'
     def __repr__(self):
         return f"({self.origin_p} , {self.origin_s}) -> ({self.p2}, {self.s2}), hops = {self.hops}, next hop = ({self.next_hop_p}, {self.next_hop_s})\n"
 class event:
@@ -402,14 +430,18 @@ def event_handler():
     evnt = event_queue.pop(next_idx)
     evnt.execute()
     return
+def traffic_info(node, packet):
+    # given a particular node and its 4 neighbours, generate a metric to send along with the packet
+    pass 
+    return 0
 # def gen_pkts():
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
 lamda = 15.625*100 #packets/s 
 # 15.625 supports 1Mbps for each pair
-num_packets = 1000
-num_pairs = 10
-np.random.seed(0)
+num_packets = 1
+num_pairs = 1
+np.random.seed(5)
 print("PAIRS")
 for i in range(num_pairs):
     (p1, p2) = np.random.randint(0, P, 2)
