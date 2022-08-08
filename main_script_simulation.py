@@ -308,6 +308,14 @@ def give_neighbours(p, s):
     down_s  = (s+1+num_sats)%num_sats
     neighbours[1].append([p, down_s])
     return neighbours
+def congestion_control(p1, s1, p2, s2, node, path_enhanced, type='ekici'):
+    '''
+    (p1,s1) -> (p2, s2)
+    node : Source node (with updated neighbouring_queue_lengths)
+    path_enhanced : Path suggested by logical routing
+    type : 'ekici' refers to basic buffer length threshold based avoidance
+    '''
+    return 0
 class node:
     def __init__(self, p, s):
         self.p = p
