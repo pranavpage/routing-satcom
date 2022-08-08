@@ -291,6 +291,8 @@ class node:
         self.queue = []
         self.longitude = 180*p/P
         self.polar_angle = 360*s/num_sats
+        self.queue_time = [[0,0]]
+        self.average_queue_length = 0
     def __repr__(self):
         return f"({self.p}, {self.s}, {len(self.queue)} packets)\n"
     
@@ -303,7 +305,6 @@ class node:
             packet.hops+=1
         elif(algo_type=='dra'):
             path_enhanced = direction_enhancement(self.p, self.s, packet.p2, packet.s2)
-            # print("ROUTE")
             if(path_enhanced.primary[0]):
                 # Horizontal
                 old_p = self.p
@@ -364,6 +365,7 @@ class event:
                 self.packet = source_node.route(self.packet)
                 # Schedules the packet for transmission, according to queue
                 source_node.queue.append(self.packet)
+                source_node.queue_time.append([t, len(source_node.queue)])
                 t_transmit = self.t_exec + len(source_node.queue)*transmit_delay # TBD : gives the queue length at the node 
                 # Creates event
                 event_queue.append(event(t_transmit, self.packet, 'departure'))
@@ -383,6 +385,7 @@ class event:
             t_arrival = self.t_exec + 1*transmit_delay + prop_delay
             event_queue.append(event(t_arrival, self.packet, 'arrival'))
             source_node.queue.pop(0)
+            source_node.queue_time.append([t, len(source_node.queue)])
         else: 
             return -1
         # print(self)
@@ -402,22 +405,36 @@ def event_handler():
 # def gen_pkts():
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
-lamda = 15.625 #packets/s
-num_packets = 10
-(p1, s1) = (2,5)
-(p2, s2) = (4,10)
+lamda = 15.625*100 #packets/s 
+# 15.625 supports 1Mbps for each pair
+num_packets = 1000
+num_pairs = 10
 np.random.seed(0)
-inter_arrival_times = np.random.exponential(1/lamda, num_packets)
-arrival_times = np.cumsum(inter_arrival_times)
-for t_arrival in arrival_times:
-    # p2 = np.random.randint(0, P)
-    # s2 = np.random.randint(0, num_sats)
-    pkt = packet(p1, s1, p2, s2, t_arrival)
-    evnt = event(t_arrival, pkt, 'arrival')
-    event_queue.append(evnt)
-    event_handler()
+print("PAIRS")
+for i in range(num_pairs):
+    (p1, p2) = np.random.randint(0, P, 2)
+    (s1, s2) = np.random.randint(0, num_sats, 2)
+    print(f"{p1,s1}->{p2,s2}")
+    inter_arrival_times = np.random.exponential(1/lamda, num_packets)
+    arrival_times = np.cumsum(inter_arrival_times)
+    for t_arrival in arrival_times:
+        # p2 = np.random.randint(0, P)
+        # s2 = np.random.randint(0, num_sats)
+        pkt = packet(p1, s1, p2, s2, t_arrival)
+        evnt = event(t_arrival, pkt, 'arrival')
+        event_queue.append(evnt)
+        event_handler()
 
 while(event_queue):
     event_handler()
-for pkt in completed_packets:
-    print(f"{pkt.t_origin*1e3:.2f} ms, {pkt.delay*1e3:.2f} ms")
+# for pkt in completed_packets:
+#     print(f"{pkt.t_origin*1e3:.2f} ms, {pkt.delay*1e3:.2f} ms, ({pkt.origin_p}, {pkt.origin_s}) -> ({pkt.p2}, {pkt.s2})")
+for node in nodes:
+    if(node.queue_time!=[[0,0]]):
+        arr = np.array(node.queue_time)
+        time = arr[:,0]
+        queue_lengths = arr[:,1]
+        inter_arr = time[1:] - time[:-1]
+        node.average_queue_length = sum(inter_arr*queue_lengths[1:])*1.0/time[-1]
+        # print(f"Lat {s_to_lat(node.s):.2f}, Long {ps_to_long(node.p, node.s):.2f}, Queue {node.average_queue_length:.2f}")
+        print(f"{node.p, node.s}, Average queue length {node.average_queue_length:.2f}")

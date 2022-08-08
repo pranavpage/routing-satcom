@@ -24,3 +24,5 @@ high probability. At first glance, this looks like intentionally
 degrading the performance of the algorithm, but we think
 that it might alleviate deadlocks in congestion, and possibly
 satellite failures.
+## Routing according to logical locations
+## Congestion control 
