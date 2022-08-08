@@ -324,13 +324,14 @@ class node:
     
     def route(self, packet, algo_type=algo_type):
         # Calculate next hop for the packet
-        # Load traffic info into packet header
         if(algo_type=='test'):
             packet.next_hop_p = self.p+1
             packet.next_hop_s = self.s+1
             packet.hops+=1
         elif(algo_type=='dra'):
             path_enhanced = direction_enhancement(self.p, self.s, packet.p2, packet.s2)
+            # include congestion control here 
+            # takes path_enhanced, packet.hdr, destination as input
             if(path_enhanced.primary[0]):
                 # Horizontal
                 old_p = self.p
@@ -390,12 +391,12 @@ class event:
             self.packet.s1 = self.packet.next_hop_s
             source_node = nodes[self.packet.p1*num_sats+self.packet.s1]
             if(not (self.packet.s1 == self.packet.s2 and self.packet.p1 == self.packet.p2)):
-                self.packet = source_node.route(self.packet)
-                # Schedules the packet for transmission, according to queue
-                source_node.queue.append(self.packet)
                 if(self.packet.hdr):
                     [metric, dir] = self.packet.hdr
                     source_node.neighbour_queue_lengths[dir[0]][(dir[1]+1)%2]=metric
+                self.packet = source_node.route(self.packet)
+                # Schedules the packet for transmission, according to queue
+                source_node.queue.append(self.packet)
                 # print("QUEUE LENGTHS")
                 # print(source_node.neighbour_queue_lengths)
                 source_node.queue_time.append([t, len(source_node.queue)])
