@@ -391,6 +391,7 @@ class event:
     def execute(self):
         '''Executed when it's the earliest event in the queue'''
         # Check event type
+        # TBD : Change it to 4 output buffers
         global t
         t = self.t_exec
         if(self.event_type=='arrival'):
