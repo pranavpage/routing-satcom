@@ -363,7 +363,7 @@ class packet:
         self.delay = 0
         self.origin_p = p1
         self.origin_s = s1
-        self.hdr = 0
+        self.hdr = []
         self.pkt_type = 'data' # 'data' vs 'state'
     def __repr__(self):
         return f"({self.origin_p} , {self.origin_s}) -> ({self.p2}, {self.s2}), hops = {self.hops}, next hop = ({self.next_hop_p}, {self.next_hop_s})\n"
@@ -393,6 +393,11 @@ class event:
                 self.packet = source_node.route(self.packet)
                 # Schedules the packet for transmission, according to queue
                 source_node.queue.append(self.packet)
+                if(self.packet.hdr):
+                    [metric, dir] = self.packet.hdr
+                    source_node.neighbour_queue_lengths[dir[0]][(dir[1]+1)%2]=metric
+                # print("QUEUE LENGTHS")
+                # print(source_node.neighbour_queue_lengths)
                 source_node.queue_time.append([t, len(source_node.queue)])
                 t_transmit = self.t_exec + len(source_node.queue)*transmit_delay # TBD : gives the queue length at the node 
                 # Creates event
@@ -409,6 +414,10 @@ class event:
             # Generates an arrival event for the next hop node 
             # Need to find propagation delay between two nodes
             source_node = nodes[self.packet.p1*num_sats+self.packet.s1]
+            # print("TRAFFIC INFO")
+            metric, dir = traffic_info(source_node, self.packet)
+            self.packet.hdr = [metric, dir]
+            print(self.packet.hdr)
             prop_delay = self.packet.prop_delay # TBD
             t_arrival = self.t_exec + 1*transmit_delay + prop_delay
             event_queue.append(event(t_arrival, self.packet, 'arrival'))
@@ -432,8 +441,26 @@ def event_handler():
     return
 def traffic_info(node, packet):
     # given a particular node and its 4 neighbours, generate a metric to send along with the packet
-    pass 
-    return 0
+    neighbours = give_neighbours(node.p, node.s)
+    dest = [packet.next_hop_p, packet.next_hop_s]
+    weights = [[0,0],[0,0]]
+    dir = [0,0]
+    central_weight = 1
+    metric = 0
+    for i in range(2):
+        for j in range(2):
+            if(neighbours[i][j] == dest):
+                dir = [i,j]
+                pass
+            else:
+                # add to metric
+                ql = node.neighbour_queue_lengths[i][j]
+                val = ql*weights[i][j]
+                if(ql>0):
+                    metric += val
+    metric += len(node.queue)*central_weight
+    metric/=(central_weight + sum(np.array(weights).flatten()))
+    return metric, dir
 # def gen_pkts():
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
