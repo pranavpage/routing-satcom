@@ -2,6 +2,7 @@
 # Combines des_simulator.py with the routing strategy developed in sat_network.py
 # Discrete Event Simulator
 import numpy as np
+import matplotlib.pyplot as plt
 alt = 600e3
 P = 12
 num_sats = 24
@@ -10,7 +11,7 @@ R = 6.378e6
 G = 6.674e-11
 M = 5.972e24
 c = 2.998e8
-packet_size = 2**(10+3) #in bits
+packet_size = 2**(16+3) #in bits
 tx_rate = 1e9 # in bits/s
 transmit_delay = packet_size/tx_rate
 print(f"Packet size = {packet_size/8:.2e} bytes")
@@ -228,7 +229,7 @@ def direction_enhancement(p1, s1, p2, s2):
     lat_2 = s_to_lat(s2)
     if(sat_in_polar_region(s1)):
         #hop in same plane
-        print("(1) polar")
+        # print("(1) polar")
         if(sat_in_polar_region(s2) and ((lat_1>0 and lat_2>0) or (lat_1<0 and lat_2<0))):
             # both in same polar region
             # print("same polar region")
@@ -251,7 +252,7 @@ def direction_enhancement(p1, s1, p2, s2):
             path_de.dh = 0
         path_de.secondary = path_de.primary
     elif(sat_in_polar_region(s1+1) or sat_in_polar_region(s1-1)):
-        print("(2) last horizontal ring")
+        # print("(2) last horizontal ring")
         if(path_de.dh):
             path_de.primary = [path_de.dh, 0]
             if(path_de.dv):
@@ -260,7 +261,7 @@ def direction_enhancement(p1, s1, p2, s2):
             path_de.primary = [0, path_de.dv]
     else:
         #condition on nh (6)
-        print("(3) Middle of the net")
+        # print("(3) Middle of the net")
         # if(s_to_lat(s1) > s_to_lat(s2)):
         #     if(path_de.dh):
         #         path_de.primary = [path_de.dh, 0]
@@ -284,7 +285,7 @@ def direction_enhancement(p1, s1, p2, s2):
             path_de.primary = ret[0]
             path_de.secondary = ret[1]
             pass
-    print(path_de)
+    # print(path_de)
     return path_de
 def give_neighbours(p, s):
     # give the four neighbours of (p,s) in [[right, left], [up, down]] format
@@ -298,7 +299,7 @@ def give_neighbours(p, s):
     # left
     left_p = (p-1+P)%P
     left_s = s
-    if((p==0 and right_p==P-1)):
+    if((p==0 and left_p==P-1)):
         left_s = num_sats - s
     neighbours[0].append([left_p, left_s])
     # up 
@@ -321,6 +322,7 @@ class node:
         self.p = p
         self.s = s
         self.queue = []
+        self.buffers = [[[], []], [[], []]]
         self.longitude = 180*p/P
         self.polar_angle = 360*s/num_sats
         self.queue_time = [[0,0]]
@@ -329,7 +331,17 @@ class node:
         self.neighbours = give_neighbours(p,s)
     def __repr__(self):
         return f"({self.p}, {self.s}, {len(self.queue)} packets)\n"
-    
+    def which_dir(self, p, s):
+        for i in range(2):
+            for j in range(2):
+                if(self.neighbours[i][j] == [p,s]):
+                    return [i,j]
+    def give_buffer_lengths(self):
+        arr = [[[], []], [[], []]]
+        for i in range(2):
+            for j in range(2):
+                arr[i][j] = len(self.buffers[i][j])
+        return arr
     def route(self, packet, algo_type=algo_type):
         # Calculate next hop for the packet
         if(algo_type=='test'):
@@ -375,7 +387,7 @@ class packet:
         self.hdr = []
         self.pkt_type = 'data' # 'data' vs 'state'
     def __repr__(self):
-        return f"({self.origin_p} , {self.origin_s}) -> ({self.p2}, {self.s2}), hops = {self.hops}, next hop = ({self.next_hop_p}, {self.next_hop_s})\n"
+        return f"Origin = {self.t_origin:.2e}, ({self.origin_p} , {self.origin_s}) -> ({self.p2}, {self.s2}), hops = {self.hops}, next hop = ({self.next_hop_p}, {self.next_hop_s})\n"
 class event:
     def __init__(self, t_exec, packet, event_type):
         '''
@@ -396,6 +408,7 @@ class event:
         t = self.t_exec
         if(self.event_type=='arrival'):
             # Routes the packet onto next hop 
+            # print("ARRIVAL")
             self.packet.p1 = self.packet.next_hop_p
             self.packet.s1 = self.packet.next_hop_s
             source_node = nodes[self.packet.p1*num_sats+self.packet.s1]
@@ -404,21 +417,29 @@ class event:
                     [metric, dir] = self.packet.hdr
                     source_node.neighbour_queue_lengths[dir[0]][(dir[1]+1)%2]=metric
                 self.packet = source_node.route(self.packet)
+                # print(source_node)
+                # print(self.packet)
                 # Schedules the packet for transmission, according to queue
-                source_node.queue.append(self.packet)
+                # print(source_node.neighbours)
+                (i,j) = source_node.which_dir(self.packet.next_hop_p, self.packet.next_hop_s)
+                source_node.buffers[i][j].append(self.packet)
+                # source_node.queue.append(self.packet)
                 # print("QUEUE LENGTHS")
                 # print(source_node.neighbour_queue_lengths)
-                source_node.queue_time.append([t, len(source_node.queue)])
-                t_transmit = self.t_exec + len(source_node.queue)*transmit_delay # TBD : gives the queue length at the node 
+                buffer_lengths = source_node.give_buffer_lengths()
+                # print(source_node)
+                # print(buffer_lengths)
+                source_node.queue_time.append([t, sum(np.array(buffer_lengths).flatten())])
+                t_transmit = self.t_exec + len(source_node.buffers[i][j])*transmit_delay # TBD : gives the queue length at the node 
                 # Creates event
                 event_queue.append(event(t_transmit, self.packet, 'departure'))
                 # print(source_node.queue)
             else:
                 self.packet.delay = t - self.packet.t_origin
                 completed_packets.append(self.packet)
+                print(f"Completed Packets : {len(completed_packets)}")
                 pass
                 # popping must be taken care of outside
-            # TBD : extract traffic info from header and store in node
         elif(self.event_type=='departure'):
             # Sends the packet onto next hop
             # Generates an arrival event for the next hop node 
@@ -427,12 +448,16 @@ class event:
             # print("TRAFFIC INFO")
             metric, dir = traffic_info(source_node, self.packet)
             self.packet.hdr = [metric, dir]
-            print(self.packet.hdr)
+            # print(self.packet.hdr)
             prop_delay = self.packet.prop_delay # TBD
             t_arrival = self.t_exec + 1*transmit_delay + prop_delay
             event_queue.append(event(t_arrival, self.packet, 'arrival'))
-            source_node.queue.pop(0)
-            source_node.queue_time.append([t, len(source_node.queue)])
+            # source_node.queue.pop(0)
+            # print(source_node.neighbours)
+            [i,j] = source_node.which_dir(self.packet.next_hop_p, self.packet.next_hop_s)
+            source_node.buffers[i][j].pop(0)
+            buffer_lengths = source_node.give_buffer_lengths()
+            source_node.queue_time.append([t, sum(np.array(buffer_lengths).flatten())])
         else: 
             return -1
         # print(self)
@@ -471,21 +496,31 @@ def traffic_info(node, packet):
     metric += len(node.queue)*central_weight
     metric/=(central_weight + sum(np.array(weights).flatten()))
     return metric, dir
+def plot_nodes(nodes):
+    '''
+        nodes : list of node objects
+    '''
+    polar_coords = np.array([[np.radians(ps_to_long(node.p, node.s)), np.radians(s_to_lat(node.s))] for node in nodes])
+    ql = np.array([node.average_queue_length for node in nodes])
+    fig2 = plt.figure(0)
+    ax2 = fig2.gca(projection = 'mollweide')
+    ax2.grid()
+    ax2.scatter(polar_coords[:,0], polar_coords[:,1], s = (ql/max(ql))*10**2)
+    return 0
 # def gen_pkts():
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
-lamda = 15.625*100 #packets/s 
+lamda = 15.625e3 #packets/s 
 # 15.625 supports 1Mbps for each pair
-num_packets = 1
-num_pairs = 1
-np.random.seed(5)
-print("PAIRS")
+num_packets = int(5)
+num_pairs = int(1e3)
 for i in range(num_pairs):
     (p1, p2) = np.random.randint(0, P, 2)
     (s1, s2) = np.random.randint(0, num_sats, 2)
-    print(f"{p1,s1}->{p2,s2}")
+    # print(f"{p1,s1}->{p2,s2}")
     inter_arrival_times = np.random.exponential(1/lamda, num_packets)
     arrival_times = np.cumsum(inter_arrival_times)
+    # print(arrival_times)
     for t_arrival in arrival_times:
         # p2 = np.random.randint(0, P)
         # s2 = np.random.randint(0, num_sats)
@@ -493,17 +528,23 @@ for i in range(num_pairs):
         evnt = event(t_arrival, pkt, 'arrival')
         event_queue.append(evnt)
         event_handler()
-
+print("#"*4 + "EVENT HANDLER" + "#"*4)
 while(event_queue):
     event_handler()
 # for pkt in completed_packets:
 #     print(f"{pkt.t_origin*1e3:.2f} ms, {pkt.delay*1e3:.2f} ms, ({pkt.origin_p}, {pkt.origin_s}) -> ({pkt.p2}, {pkt.s2})")
+
 for node in nodes:
     if(node.queue_time!=[[0,0]]):
         arr = np.array(node.queue_time)
         time = arr[:,0]
         queue_lengths = arr[:,1]
         inter_arr = time[1:] - time[:-1]
-        node.average_queue_length = sum(inter_arr*queue_lengths[1:])*1.0/time[-1]
+        node.average_queue_length = sum(inter_arr*queue_lengths[:-1])*1.0/t
         # print(f"Lat {s_to_lat(node.s):.2f}, Long {ps_to_long(node.p, node.s):.2f}, Queue {node.average_queue_length:.2f}")
-        print(f"{node.p, node.s}, Average queue length {node.average_queue_length:.2f}")
+        print(f"{node.p, node.s}, Average queue length {node.average_queue_length:.3f}")
+        # print(arr)
+print(f"Completed packets : {len(completed_packets)}")
+plot_nodes(nodes)
+plt.savefig("images/queue_lengths.png")
+plt.show()
