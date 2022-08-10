@@ -520,10 +520,7 @@ for i in range(num_pairs):
     # print(f"{p1,s1}->{p2,s2}")
     inter_arrival_times = np.random.exponential(1/lamda, num_packets)
     arrival_times = np.cumsum(inter_arrival_times)
-    # print(arrival_times)
     for t_arrival in arrival_times:
-        # p2 = np.random.randint(0, P)
-        # s2 = np.random.randint(0, num_sats)
         pkt = packet(p1, s1, p2, s2, t_arrival)
         evnt = event(t_arrival, pkt, 'arrival')
         event_queue.append(evnt)
