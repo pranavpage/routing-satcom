@@ -12,7 +12,7 @@ G = 6.674e-11
 M = 5.972e24
 c = 2.998e8
 packet_size = 2**(10+3) #in bits
-tx_rate = 1e8 # in bits/s
+tx_rate = 1e7 # in bits/s
 transmit_delay = packet_size/tx_rate
 print(f"Packet size = {packet_size/8:.2e} bytes")
 print(f"Transmit delay = {transmit_delay:.2e}")
@@ -580,12 +580,12 @@ def plot_nodes(nodes):
 # def gen_pkts():
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
-lamda = 1e6 #packets/s 
+lamda = 1e9 #packets/s 
 # 15.625 supports 1Mbps for each pair
 np.random.seed(route_seed)
 num_sessions = 1
 num_packets = int(5)
-num_flow_packets = int(20)
+num_flow_packets = int(30)
 num_pairs = int(1e3)
 feed_spacing = (num_packets/lamda)/2
 t_arr = np.arange(0, num_sessions)*feed_spacing
