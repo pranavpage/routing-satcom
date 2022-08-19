@@ -25,7 +25,7 @@ print(f"Propagation delay ~= {l_alpha/c:.2e} s")
 print(f"t_prop/t_queue = {l_alpha/c/transmit_delay:.2f}")
 s_min = np.floor((90 - polar_region_boundary)/theta_intra_plane)+1
 # max_buff_length = int((l_alpha/c/transmit_delay))
-max_buff_length = 40
+max_buff_length = 25
 # print(f"Number of orbital planes = {P}, sats per plane = {num_sats}")
 # print(f"Inter plane angle : {theta_inter_plane:.2f}")
 # print(f"Intra plane angle : {theta_intra_plane:.2f}")
@@ -37,7 +37,7 @@ t = 0
 algo_type = 'dra'
 route_seed = 0
 cc_arr = ['ekici', '3-average']
-cc_type = cc_arr[0]
+cc_type = cc_arr[1]
 print(f"Congestion control type : {cc_type}")
 class min_path:
     def __init__(self, dv, dh, nv, nh):
