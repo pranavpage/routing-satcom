@@ -35,7 +35,7 @@ completed_packets = []
 flow_packets = []
 t = 0
 algo_type = 'dra'
-route_seed = 8
+route_seed = 0
 cc_arr = ['ekici', '3-average']
 cc_type = cc_arr[1]
 print(f"Congestion control type : {cc_type}")
@@ -76,7 +76,7 @@ def ps_to_long(p, s):
         longitude = (p*180.0/P)
     return longitude
 lat_min = s_to_lat(s_min)
-print(f"Max latitude of ring : {lat_min:.2f}")
+# print(f"Max latitude of ring : {lat_min:.2f}")
 def go_polar(p1, s1, p2, s2, path_de):
     # condition 6 in paper
     # decides whether going polar is shorter
@@ -585,7 +585,7 @@ print(f"In rate = {lamda:.2e} packets/s")
 # 15.625 supports 1Mbps for each pair
 np.random.seed(route_seed)
 num_sessions = 1
-num_packets = int(50)
+num_packets = int(5e3)
 num_sources = int(1e2)
 num_flow_packets = int(20)
 feed_spacing = (num_packets/lamda)/2
@@ -634,7 +634,7 @@ print(f"Dedicated flow : {p1,s1}->{p2,s2}, {num_flow_packets} packets")
 t_start_flow = (1/lamda)*(num_packets)/3
 # t_start_flow = 1e-3
 print(f"Start time : t = {t_start_flow:e}")
-lamda_flow = 1e5
+lamda_flow = 1e4
 inter_arrival_times = np.random.exponential(1/lamda, num_flow_packets)
 arrival_times = np.cumsum(inter_arrival_times) + t_start_flow
 # print(arrival_times)
@@ -672,8 +672,8 @@ for node in nodes:
         # print(f"{node.p, node.s}, Average queue length {node.average_queue_length:.3f}, max queue lengths : {max(queue_lengths)}")
         # print(arr)
 print(f"Completed packets : {len(completed_packets)}")
-plot_nodes(nodes)
-plt.savefig("images/queue_lengths.png")
+# plot_nodes(nodes)
+# plt.savefig("images/queue_lengths.png")
 # plt.show()
 
 avg_delay = np.array([pkt.delay for pkt in flow_packets])
