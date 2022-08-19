@@ -25,7 +25,7 @@ print(f"Propagation delay ~= {l_alpha/c:.2e} s")
 print(f"t_prop/t_queue = {l_alpha/c/transmit_delay:.2f}")
 s_min = np.floor((90 - polar_region_boundary)/theta_intra_plane)+1
 # max_buff_length = int((l_alpha/c/transmit_delay))
-max_buff_length = 50
+max_buff_length = 40
 # print(f"Number of orbital planes = {P}, sats per plane = {num_sats}")
 # print(f"Inter plane angle : {theta_inter_plane:.2f}")
 # print(f"Intra plane angle : {theta_intra_plane:.2f}")
@@ -37,7 +37,7 @@ t = 0
 algo_type = 'dra'
 route_seed = 0
 cc_arr = ['ekici', '3-average']
-cc_type = cc_arr[1]
+cc_type = cc_arr[0]
 print(f"Congestion control type : {cc_type}")
 class min_path:
     def __init__(self, dv, dh, nv, nh):
@@ -561,10 +561,13 @@ def traffic_info(node, packet):
                 ql = node.neighbour_queue_lengths[i][j]
                 val1 = ql*weights[i][j]
                 val2 = len(node.buffers[i][j])*central_weights[i][j]
+                metric+=val2
                 if(ql>0):
-                    metric += (val1+val2)
+                    metric += (val1)
     # metric += len(node.queue)*central_weight
     metric/=(sum(np.array(central_weights).flatten()) + sum(np.array(weights).flatten()))
+    # if([node.p, node.s] == [2,9]):
+    #     print(f"{node.p, node.s, node.neighbour_queue_lengths}, {packet.next_hop_p, packet.next_hop_s}, {metric}")
     return metric, dir
 def plot_nodes(nodes):
     '''
@@ -586,8 +589,8 @@ print(f"In rate = {lamda:.2e} packets/s")
 # 15.625 supports 1Mbps for each pair
 np.random.seed(route_seed)
 num_sessions = 1
-num_packets = int(5e3)
-num_sources = int(1e2)
+num_packets = int(1e2)
+num_sources = int(2e2)
 num_flow_packets = int(20)
 feed_spacing = (num_packets/lamda)/2
 t_arr = np.arange(0, num_sessions)*feed_spacing
@@ -633,9 +636,10 @@ def feed_queue(num_packets, t_feed):
 [p2,s2] = [5,2]
 print(f"Dedicated flow : {p1,s1}->{p2,s2}, {num_flow_packets} packets")
 t_start_flow = (1/lamda)*(num_packets)/3
+# t_start_flow = 0
 # t_start_flow = 1e-3
-print(f"Start time : t = {t_start_flow:e}")
-lamda_flow = 1e4
+print(f"Start time : t = {t_start_flow:.3e}")
+lamda_flow = 5e3
 inter_arrival_times = np.random.exponential(1/lamda, num_flow_packets)
 arrival_times = np.cumsum(inter_arrival_times) + t_start_flow
 # print(arrival_times)
