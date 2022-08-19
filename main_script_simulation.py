@@ -33,11 +33,13 @@ max_buff_length = 40
 event_queue = []
 completed_packets = []
 flow_packets = []
+p_preference = 0.9
+buffer_weight = 0.8
 t = 0
 algo_type = 'dra'
-route_seed = 0
-cc_arr = ['ekici', '3-average']
-cc_type = cc_arr[0]
+# route_seed = 0
+cc_arr = ['ekici', '3-average', 'prob-routing']
+cc_type = cc_arr[1]
 print(f"Congestion control type : {cc_type}")
 class min_path:
     def __init__(self, dv, dh, nv, nh):
@@ -368,6 +370,36 @@ def congestion_control(node, path_enhanced, type=cc_type):
                     return path_enhanced.primary
             else:
                 return path_enhanced.primary
+    if(type == 'prob-routing'):
+        # probabilistic routing 
+        node_idx_a = dir_to_node(path_enhanced.primary)
+        buff_length = len(node.buffers[node_idx_a[0]][node_idx_a[1]])
+        ngbr_buff_length = node.neighbour_queue_lengths[node_idx_a[0]][node_idx_a[1]]
+        if(ngbr_buff_length>0):
+            a = buff_length*buffer_weight + ngbr_buff_length*(1-buffer_weight)
+        else:
+            a = buff_length
+        
+        node_idx_b = dir_to_node(path_enhanced.secondary)
+        b=-1
+        if(node_idx_b):
+            buff_length = len(node.buffers[node_idx_b[0]][node_idx_b[1]])
+            ngbr_buff_length = node.neighbour_queue_lengths[node_idx_b[0]][node_idx_b[1]]
+            if(ngbr_buff_length>0):
+                b = buff_length*buffer_weight + ngbr_buff_length*(1-buffer_weight)
+            else:
+                b = buff_length
+        p_primary = 1
+        p_secondary = 0
+        if(b>=0):
+            # a, b
+            p_primary = ((b+1)*p_preference + (a+1)*(1-p_preference))/(a+b+2)
+            p_secondary = ((a+1)*p_preference + (b+1)*(1-p_preference))/(a+b+2)
+        # print(f"{a}:{p_primary:.2f}, {b}:{p_secondary:.2f}")
+        if(np.random.random_sample()<=p_primary):
+            return path_enhanced.primary
+        else:
+            return path_enhanced.secondary
 def dir_to_node(dir):
     # returns index of node corresponding to dir (as in path format)
     if(dir[0]):
@@ -587,10 +619,10 @@ lamda = 1e5 #packets/s
 print(f"Out rate = {tx_rate/packet_size*4:.2e} packets/s")
 print(f"In rate = {lamda:.2e} packets/s")
 # 15.625 supports 1Mbps for each pair
-np.random.seed(route_seed)
+# np.random.seed(route_seed)
 num_sessions = 1
 num_packets = int(1e2)
-num_sources = int(2e2)
+num_sources = int(50)
 num_flow_packets = int(20)
 feed_spacing = (num_packets/lamda)/2
 t_arr = np.arange(0, num_sessions)*feed_spacing
@@ -628,10 +660,7 @@ def feed_queue(num_packets, t_feed):
             evnt = event(t_arrival, pkt, 'arrival')
             event_feed.append(evnt)
     return event_feed
-# print("#"*4 + "EVENT HANDLER" + "#"*4)
 # one dedicated flow
-# (p1, p2) = np.random.randint(0, P, 2)
-# (s1, s2) = np.random.randint(0, num_sats, 2)
 [p1,s1] = [2,9]
 [p2,s2] = [5,2]
 print(f"Dedicated flow : {p1,s1}->{p2,s2}, {num_flow_packets} packets")
