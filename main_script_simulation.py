@@ -12,7 +12,7 @@ G = 6.674e-11
 M = 5.972e24
 c = 2.998e8
 packet_size = 2**(10+3) #in bits
-tx_rate = 5e7 # in bits/s
+tx_rate = 25e6 # in bits/s
 transmit_delay = packet_size/tx_rate
 print(f"Packet size = {packet_size/8:.2e} bytes")
 print(f"Transmit delay = {transmit_delay:.2e}")
@@ -25,7 +25,7 @@ print(f"Propagation delay ~= {l_alpha/c:.2e} s")
 print(f"t_prop/t_queue = {l_alpha/c/transmit_delay:.2f}")
 s_min = np.floor((90 - polar_region_boundary)/theta_intra_plane)+1
 # max_buff_length = int((l_alpha/c/transmit_delay))
-max_buff_length = 40
+max_buff_length = 20
 # print(f"Number of orbital planes = {P}, sats per plane = {num_sats}")
 # print(f"Inter plane angle : {theta_inter_plane:.2f}")
 # print(f"Intra plane angle : {theta_intra_plane:.2f}")
@@ -39,7 +39,7 @@ t = 0
 algo_type = 'dra'
 # route_seed = 0
 cc_arr = ['ekici', '3-average', 'prob-routing']
-cc_type = cc_arr[1]
+cc_type = cc_arr[0]
 print(f"Congestion control type : {cc_type}")
 class min_path:
     def __init__(self, dv, dh, nv, nh):
@@ -623,7 +623,7 @@ print(f"In rate = {lamda:.2e} packets/s")
 num_sessions = 1
 num_packets = int(1e2)
 num_sources = int(50)
-num_flow_packets = int(20)
+num_flow_packets = int(50)
 feed_spacing = (num_packets/lamda)/2
 t_arr = np.arange(0, num_sessions)*feed_spacing
 p_min = 1
@@ -668,7 +668,7 @@ t_start_flow = (1/lamda)*(num_packets)/3
 # t_start_flow = 0
 # t_start_flow = 1e-3
 print(f"Start time : t = {t_start_flow:.3e}")
-lamda_flow = 5e3
+lamda_flow = 1e6
 inter_arrival_times = np.random.exponential(1/lamda, num_flow_packets)
 arrival_times = np.cumsum(inter_arrival_times) + t_start_flow
 # print(arrival_times)
