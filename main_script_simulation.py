@@ -547,9 +547,9 @@ def traffic_info(node, packet):
     # given a particular node and its 4 neighbours, generate a metric to send along with the packet
     neighbours = give_neighbours(node.p, node.s)
     dest = [packet.next_hop_p, packet.next_hop_s]
-    weights = [[1,1],[1,1]]
+    weights = [[0,0],[0,0]]
     dir = [0,0]
-    central_weight = 0
+    central_weights = [[1,1], [1,1]]
     metric = 0
     for i in range(2):
         for j in range(2):
@@ -559,11 +559,12 @@ def traffic_info(node, packet):
             else:
                 # add to metric
                 ql = node.neighbour_queue_lengths[i][j]
-                val = ql*weights[i][j]
+                val1 = ql*weights[i][j]
+                val2 = len(node.buffers[i][j])*central_weights[i][j]
                 if(ql>0):
-                    metric += val
-    metric += len(node.queue)*central_weight
-    metric/=(central_weight + sum(np.array(weights).flatten()))
+                    metric += (val1+val2)
+    # metric += len(node.queue)*central_weight
+    metric/=(sum(np.array(central_weights).flatten()) + sum(np.array(weights).flatten()))
     return metric, dir
 def plot_nodes(nodes):
     '''
