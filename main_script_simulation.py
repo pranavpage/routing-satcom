@@ -392,7 +392,6 @@ def congestion_control(node, path_enhanced, type=cc_type):
             else:
                 b = buff_length
         p_primary = 1
-        p_secondary = 0
         if(b>=0):
             # a, b
             # p_primary = ((b+1)*p_preference + (a+1)*(1-p_preference))/(a+b+2)
