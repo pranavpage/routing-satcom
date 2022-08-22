@@ -78,6 +78,8 @@ def ps_to_long(p, s):
         longitude = (p*180.0/P)
     return longitude
 lat_min = s_to_lat(s_min)
+def f_prob(a,b,p):
+    return p*b/(a + (b-a)*p)
 # print(f"Max latitude of ring : {lat_min:.2f}")
 def go_polar(p1, s1, p2, s2, path_de):
     # condition 6 in paper
@@ -393,8 +395,9 @@ def congestion_control(node, path_enhanced, type=cc_type):
         p_secondary = 0
         if(b>=0):
             # a, b
-            p_primary = ((b+1)*p_preference + (a+1)*(1-p_preference))/(a+b+2)
-            p_secondary = ((a+1)*p_preference + (b+1)*(1-p_preference))/(a+b+2)
+            # p_primary = ((b+1)*p_preference + (a+1)*(1-p_preference))/(a+b+2)
+            # p_secondary = ((a+1)*p_preference + (b+1)*(1-p_preference))/(a+b+2)
+            p_primary = f_prob(a+1, b+1, p_preference)
         # print(f"{a}:{p_primary:.2f}, {b}:{p_secondary:.2f}")
         if(np.random.random_sample()<=p_primary):
             return path_enhanced.primary
