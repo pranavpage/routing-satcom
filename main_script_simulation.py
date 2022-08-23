@@ -31,7 +31,7 @@ l_alpha = (R+alt)*np.sqrt(2*(1-np.cos(np.radians(theta_inter_plane))))
 s_min = np.floor((90 - polar_region_boundary)/theta_intra_plane)+1
 # max_buff_length = int((l_alpha/c/transmit_delay))
 max_buff_length = 50
-drop_buff_length = 100
+drop_buff_length = 150
 # print(f"Long tail buffer : {drop_buff_length} packets")
 # print(f"Number of orbital planes = {P}, sats per plane = {num_sats}")
 # print(f"Inter plane angle : {theta_inter_plane:.2f}")
@@ -635,13 +635,13 @@ nodes = initialize_constellation(alt, P, num_sats)
 lamda = 2e4 #packets/s 
 t_stop = 300e-3
 num_packets = int(25)
-num_sources = int(2e2)
+num_sources = int(1e2)
 num_flow_packets = int(50)
 p_min = 1
 p_max = 6
 s_min = 3
 s_max = 10
-t_step = 50e-3
+t_step = 25e-3
 print(f"Out rate = {tx_rate/packet_size*4:.2e} packets/s")
 print(f"In rate = {lamda:.2e} packets/s")
 print(f"t_stop = {t_stop*1e3:.1f} ms")
@@ -668,6 +668,7 @@ def feed_queue(num_sources, num_packets, t_feed):
     for i in range(num_sources):
         [p1, p2] = np.random.randint(p_min, p_max+1, 2)
         [s1, s2] = np.random.randint(s_min, s_max+1, 2)
+        print(f"{p1,s1}->{p2,s2}")
         inter_arrival_times = np.random.exponential(1/lamda, num_packets)
         arrival_times = t_feed+np.cumsum(inter_arrival_times)
         for t_arrival in arrival_times:
