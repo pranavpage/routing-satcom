@@ -31,7 +31,7 @@ l_alpha = (R+alt)*np.sqrt(2*(1-np.cos(np.radians(theta_inter_plane))))
 s_min = np.floor((90 - polar_region_boundary)/theta_intra_plane)+1
 # max_buff_length = int((l_alpha/c/transmit_delay))
 max_buff_length = 50
-drop_buff_length = 150
+drop_buff_length = 100
 # print(f"Long tail buffer : {drop_buff_length} packets")
 # print(f"Number of orbital planes = {P}, sats per plane = {num_sats}")
 # print(f"Inter plane angle : {theta_inter_plane:.2f}")
@@ -668,7 +668,6 @@ def feed_queue(num_sources, num_packets, t_feed):
     for i in range(num_sources):
         [p1, p2] = np.random.randint(p_min, p_max+1, 2)
         [s1, s2] = np.random.randint(s_min, s_max+1, 2)
-        print(f"{p1,s1}->{p2,s2}")
         inter_arrival_times = np.random.exponential(1/lamda, num_packets)
         arrival_times = t_feed+np.cumsum(inter_arrival_times)
         for t_arrival in arrival_times:
@@ -693,10 +692,10 @@ for t_arrival in arrival_times:
     flow_feed.append(evnt)
 event_queue+=flow_feed
 event_queue+=feed_queue(num_sources, num_packets, t)
-print(f"Initial packets at t={t*1e3:.3f} ms")
+# print(f"Initial packets at t={t*1e3:.3f} ms")
 while(t<=t_stop and event_queue):
     t_next = (np.floor(t/t_step)+1)*t_step
-    print(f"t_next = {t_next*1e3:.3f} ms, t = {t*1e3:.3f} ms")
+    # print(f"t_next = {t_next*1e3:.3f} ms, t = {t*1e3:.3f} ms")
     while(t<=t_next and event_queue):
         event_handler()
         print(f"Time : {t*1e3:4.3f} ms, events = {len(event_queue):.2e}", end='\r')
