@@ -3,6 +3,11 @@
 # Discrete Event Simulator
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+import pandas as pd
+args = sys.argv
+cc_index = int(args[1])
+# global constants
 alt = 600e3
 P = 12
 num_sats = 24
@@ -32,6 +37,8 @@ drop_buff_length = 100
 # print(f"Inter plane angle : {theta_inter_plane:.2f}")
 # print(f"Intra plane angle : {theta_intra_plane:.2f}")
 # print(f"Polar Region bdry : {polar_region_boundary}")
+
+# Per simulation
 event_queue = []
 completed_packets = []
 flow_packets = []
@@ -42,7 +49,7 @@ t = 0
 algo_type = 'dra'
 # route_seed = 0
 cc_arr = ['ekici', '3-average', 'prob-routing']
-cc_type = cc_arr[2]
+cc_type = cc_arr[cc_index]
 print(f"Congestion control type : {cc_type}")
 class min_path:
     def __init__(self, dv, dh, nv, nh):
@@ -626,15 +633,15 @@ def plot_nodes(nodes):
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
 lamda = 2e4 #packets/s 
-t_stop = 250e-3
-num_packets = int(10)
+t_stop = 300e-3
+num_packets = int(25)
 num_sources = int(2e2)
 num_flow_packets = int(50)
 p_min = 1
 p_max = 6
 s_min = 3
 s_max = 10
-t_step = 20e-3
+t_step = 50e-3
 print(f"Out rate = {tx_rate/packet_size*4:.2e} packets/s")
 print(f"In rate = {lamda:.2e} packets/s")
 print(f"t_stop = {t_stop*1e3:.1f} ms")
@@ -674,7 +681,7 @@ def feed_queue(num_sources, num_packets, t_feed):
 print(f"Dedicated flow : {p1,s1}->{p2,s2}, {num_flow_packets} packets")
 t_start_flow = 50e-3
 print(f"Start time : t = {t_start_flow:.3e}")
-lamda_flow = 1e6
+lamda_flow = 1e4
 inter_arrival_times = np.random.exponential(1/lamda, num_flow_packets)
 arrival_times = np.cumsum(inter_arrival_times) + t_start_flow
 # print(arrival_times)
@@ -727,4 +734,9 @@ avg_delay = np.array([pkt.delay for pkt in flow_packets])
 t_min = arrival_times[0]
 t_max = np.max(np.array([pkt.t_origin+pkt.delay]))
 print(f"Mean delay : {np.mean(avg_delay)*1e3:.3f} ms, stddev : {np.std(avg_delay)*1e3:.3f} ms, num packets = {len(flow_packets)}")
+avg_throughput = num_flow_packets*packet_size/(t_max - t_min)
 print(f"Average throughput : {num_flow_packets*packet_size/(t_max - t_min):.3e} bps")
+
+df = pd.DataFrame(columns=['cc_type', 'flow_completed', 'dropped_flow', 'avg_flow_drop_time', 'mean_delay', 'stddev', 'avg_throughput'])
+df.loc[len(df.index)] = [cc_type, len(flow_packets), len(dropped_flow_packets), np.mean(flow_delay), np.mean(avg_delay), np.std(avg_delay), num_flow_packets*packet_size/(t_max - t_min)]
+df.to_csv('sim_log.csv', mode='a', index=False, header=False)
