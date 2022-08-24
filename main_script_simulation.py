@@ -7,10 +7,13 @@ import sys
 import pandas as pd
 args = sys.argv
 cc_index = int(args[1])
+route_seed = int(args[2])
+route_state = np.random.RandomState(route_seed)
+decision_state = np.random.RandomState(0)
 # global constants
 alt = 600e3
-P = 12
-num_sats = 24
+P = 6
+num_sats = 12
 inclination = 90
 R = 6.378e6
 G = 6.674e-11
@@ -26,12 +29,12 @@ theta_intra_plane = 360.0/num_sats
 theta_inter_plane = 180.0/P
 l_intra_plane = (R+alt)*np.sqrt(2*(1-np.cos(np.radians(theta_intra_plane))))
 l_alpha = (R+alt)*np.sqrt(2*(1-np.cos(np.radians(theta_inter_plane))))
-# print(f"Propagation delay ~= {l_alpha/c:.2e} s")
-# print(f"t_prop/t_queue = {l_alpha/c/transmit_delay:.2f}")
+print(f"Propagation delay ~= {l_alpha/c:.2e} s")
+print(f"t_prop/t_queue = {l_alpha/c/transmit_delay:.2f}")
 s_min = np.floor((90 - polar_region_boundary)/theta_intra_plane)+1
 # max_buff_length = int((l_alpha/c/transmit_delay))
 max_buff_length = 50
-drop_buff_length = 100
+drop_buff_length = 200
 # print(f"Long tail buffer : {drop_buff_length} packets")
 # print(f"Number of orbital planes = {P}, sats per plane = {num_sats}")
 # print(f"Inter plane angle : {theta_inter_plane:.2f}")
@@ -43,11 +46,11 @@ event_queue = []
 completed_packets = []
 flow_packets = []
 dropped_flow_packets = []
+dropped_packets = []
 p_preference = 0.9
 buffer_weight = 0.8
 t = 0
 algo_type = 'dra'
-# route_seed = 0
 cc_arr = ['ekici', '3-average', 'prob-routing']
 cc_type = cc_arr[cc_index]
 print(f"Congestion control type : {cc_type}")
@@ -408,7 +411,7 @@ def congestion_control(node, path_enhanced, type=cc_type):
         else:
             if(b>=0):
                 p_primary = f_prob(a+1, b+1, p_preference)            
-            if(np.random.random_sample()<=p_primary):
+            if(decision_state.random_sample()<=p_primary):
                 return path_enhanced.primary
             else:
                 return path_enhanced.secondary
@@ -547,11 +550,12 @@ class event:
                 else:
                     # drop packet
                     self.packet.delay = t - self.packet.t_origin
+                    dropped_packets.append(self.packet)
                     if(self.packet.pkt_type == 'flow'):
-                        dropped_flow_packets.append(self.packet)
+                        dropped_flow_packets.append(self.packet)    
             else:
                 self.packet.delay = t - self.packet.t_origin
-                # completed_packets.append(self.packet)
+                completed_packets.append(self.packet)
                 if(self.packet.pkt_type == 'flow'):
                     flow_packets.append(self.packet)
                     # print(f"Flow packets completed : {len(flow_packets)}", end='\r')
@@ -632,16 +636,15 @@ def plot_nodes(nodes):
 # def gen_pkts():
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
-lamda = 2e4 #packets/s 
-t_stop = 300e-3
-num_packets = int(25)
-num_sources = int(1e2)
-num_flow_packets = int(50)
-p_min = 1
-p_max = 6
-s_min = 3
-s_max = 10
-t_step = 25e-3
+lamda = 1.34e4 #packets/s 
+t_stop = 100e-3
+num_packets = int(146)
+num_sources = int(20)
+p_min = 0
+p_max = P
+s_min = 0
+s_max = num_sats
+t_step = 10e-3
 print(f"Out rate = {tx_rate/packet_size*4:.2e} packets/s")
 print(f"In rate = {lamda:.2e} packets/s")
 print(f"t_stop = {t_stop*1e3:.1f} ms")
@@ -666,31 +669,31 @@ def feed_queue(num_sources, num_packets, t_feed):
     #         evnt = event(t_arrival, pkt, 'arrival')
     #         event_feed.append(evnt)
     for i in range(num_sources):
-        [p1, p2] = np.random.randint(p_min, p_max+1, 2)
-        [s1, s2] = np.random.randint(s_min, s_max+1, 2)
-        inter_arrival_times = np.random.exponential(1/lamda, num_packets)
+        [p1, p2] = route_state.randint(p_min, p_max, 2)
+        [s1, s2] = route_state.randint(s_min, s_max, 2)
+        inter_arrival_times = route_state.exponential(1/lamda, num_packets)
         arrival_times = t_feed+np.cumsum(inter_arrival_times)
         for t_arrival in arrival_times:
             pkt = packet(p1, s1, p2, s2, t_arrival)
             evnt = event(t_arrival, pkt, 'arrival')
             event_feed.append(evnt)
     return event_feed
-# one dedicated flow
-[p1,s1] = [2,9]
-[p2,s2] = [5,2]
-print(f"Dedicated flow : {p1,s1}->{p2,s2}, {num_flow_packets} packets")
-t_start_flow = 50e-3
-print(f"Start time : t = {t_start_flow:.3e}")
-lamda_flow = 1e4
-inter_arrival_times = np.random.exponential(1/lamda, num_flow_packets)
-arrival_times = np.cumsum(inter_arrival_times) + t_start_flow
-# print(arrival_times)
-flow_feed = []
-for t_arrival in arrival_times:
-    pkt = packet(p1, s1, p2, s2, t_arrival, 'flow')
-    evnt = event(t_arrival, pkt, 'arrival')
-    flow_feed.append(evnt)
-event_queue+=flow_feed
+# # one dedicated flow
+# [p1,s1] = [2,9]
+# [p2,s2] = [5,2]
+# print(f"Dedicated flow : {p1,s1}->{p2,s2}, {num_flow_packets} packets")
+# t_start_flow = 50e-3
+# print(f"Start time : t = {t_start_flow:.3e}")
+# lamda_flow = 1e4
+# inter_arrival_times = route_state.exponential(1/lamda, num_flow_packets)
+# arrival_times = np.cumsum(inter_arrival_times) + t_start_flow
+# # print(arrival_times)
+# flow_feed = []
+# for t_arrival in arrival_times:
+#     pkt = packet(p1, s1, p2, s2, t_arrival, 'flow')
+#     evnt = event(t_arrival, pkt, 'arrival')
+#     flow_feed.append(evnt)
+# event_queue+=flow_feed
 event_queue+=feed_queue(num_sources, num_packets, t)
 # print(f"Initial packets at t={t*1e3:.3f} ms")
 while(t<=t_stop and event_queue):
@@ -709,6 +712,7 @@ for node in nodes:
         arr = np.array(node.queue_time)
         time = arr[:,0]
         queue_lengths = arr[:,1]
+        # print(f"{node.p, node.s} : {max(queue_lengths)}")
         inter_arr = time[1:] - time[:-1]
         node.average_queue_length = sum(inter_arr*queue_lengths[:-1])*1.0/t
         # if(i == 0 and max(queue_lengths)>=5):
@@ -721,22 +725,29 @@ for node in nodes:
         # print(f"Lat {s_to_lat(node.s):.2f}, Long {ps_to_long(node.p, node.s):.2f}, Queue {node.average_queue_length:.2f}")
         # print(f"{node.p, node.s}, Average queue length {node.average_queue_length:.3f}, max queue lengths : {max(queue_lengths)}")
         # print(arr)
-# print(f"Completed packets : {len(completed_packets)}")
-print(f"Completed flow packets : {len(flow_packets)}")
-print(f"Dropped flow packets : {len(dropped_flow_packets)}")
-flow_delay = np.array([pkt.delay for pkt in dropped_flow_packets])
-print(f"Average time spent in system = {np.mean(flow_delay)*1e3:.3f} ms") 
+print(f"Completed packets : {len(completed_packets)}")
+delay_arr = np.array([pkt.delay for pkt in completed_packets])
+print(f"Average delay = {np.mean(delay_arr)*1e3:.3f} ms")
+print(f"Dropped packets : {len(dropped_packets)}")
+# print(f"Completed flow packets : {len(flow_packets)}")
+# print(f"Dropped flow packets : {len(dropped_flow_packets)}")
+# flow_delay = np.array([pkt.delay for pkt in dropped_flow_packets])
+# print(f"Average time spent in system = {np.mean(flow_delay)*1e3:.3f} ms") 
 # plot_nodes(nodes)
 # plt.savefig("images/queue_lengths.png")
 # plt.show()
 
-avg_delay = np.array([pkt.delay for pkt in flow_packets])
-t_min = arrival_times[0]
-t_max = np.max(np.array([pkt.t_origin+pkt.delay]))
-print(f"Mean delay : {np.mean(avg_delay)*1e3:.3f} ms, stddev : {np.std(avg_delay)*1e3:.3f} ms, num packets = {len(flow_packets)}")
-avg_throughput = num_flow_packets*packet_size/(t_max - t_min)
-print(f"Average throughput : {num_flow_packets*packet_size/(t_max - t_min):.3e} bps")
+# avg_delay = np.array([pkt.delay for pkt in flow_packets])
+# # t_min = arrival_times[0]
+# t_max = np.max(np.array([pkt.t_origin+pkt.delay]))
+# print(f"Mean delay : {np.mean(avg_delay)*1e3:.3f} ms, stddev : {np.std(avg_delay)*1e3:.3f} ms, num packets = {len(flow_packets)}")
+# avg_throughput = num_flow_packets*packet_size/(t_max - t_min)
+# print(f"Average throughput : {num_flow_packets*packet_size/(t_max - t_min):.3e} bps")
 
-df = pd.DataFrame(columns=['cc_type', 'flow_completed', 'dropped_flow', 'avg_flow_drop_time', 'mean_delay', 'stddev', 'avg_throughput'])
-df.loc[len(df.index)] = [cc_type, len(flow_packets), len(dropped_flow_packets), np.mean(flow_delay), np.mean(avg_delay), np.std(avg_delay), num_flow_packets*packet_size/(t_max - t_min)]
-df.to_csv('sim_log.csv', mode='a', index=False, header=False)
+# df = pd.DataFrame(columns=['cc_type', 'flow_completed', 'dropped_flow', 'avg_flow_drop_time', 'mean_delay', 'stddev', 'avg_throughput'])
+# df.loc[len(df.index)] = [cc_type, len(flow_packets), len(dropped_flow_packets), np.mean(flow_delay), np.mean(avg_delay), np.std(avg_delay), num_flow_packets*packet_size/(t_max - t_min)]
+# df.to_csv('sim_log.csv', mode='a', index=False, header=False)
+
+df = pd.DataFrame(columns = ['cc_type', 'completed', 'dropped', 'mean_delay'])
+df.loc[len(df.index)] = [cc_type, len(completed_packets), len(dropped_packets), np.mean(delay_arr)]
+df.to_csv('sim_all_flows.csv', mode='a', index=False, header=False)
