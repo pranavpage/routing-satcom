@@ -638,6 +638,7 @@ def plot_nodes(nodes):
 nodes = initialize_constellation(alt, P, num_sats)
 lamda = 1.34e4 #packets/s 
 t_stop = 100e-3
+t_feed = 40e-3
 num_packets = int(146)
 num_sources = int(20)
 p_min = 0
@@ -696,7 +697,7 @@ def feed_queue(num_sources, num_packets, t_feed):
 # event_queue+=flow_feed
 event_queue+=feed_queue(num_sources, num_packets, t)
 # print(f"Initial packets at t={t*1e3:.3f} ms")
-while(t<=t_stop and event_queue):
+while(t<=t_feed and event_queue):
     t_next = (np.floor(t/t_step)+1)*t_step
     # print(f"t_next = {t_next*1e3:.3f} ms, t = {t*1e3:.3f} ms")
     while(t<=t_next and event_queue):
@@ -704,6 +705,10 @@ while(t<=t_stop and event_queue):
         print(f"Time : {t*1e3:4.3f} ms, events = {len(event_queue):.2e}", end='\r')
     event_queue+=feed_queue(num_sources, num_packets, t)
     print(f"Fed {num_packets*num_sources} packets at t={t*1e3:.3f} ms \n")
+print(f"Feeding stopped at t={t*1e3:.3f} ms")
+while(event_queue):
+    event_handler()
+    print(f"Time : {t*1e3:4.3f} ms, events = {len(event_queue):.2e}", end='\r')
 # for pkt in completed_packets:
 #     print(f"{pkt.t_origin*1e3:.2f} ms, {pkt.delay*1e3:.2f} ms, ({pkt.origin_p}, {pkt.origin_s}) -> ({pkt.p2}, {pkt.s2})")
 i = 0
@@ -748,6 +753,6 @@ print(f"Dropped packets : {len(dropped_packets)}")
 # df.loc[len(df.index)] = [cc_type, len(flow_packets), len(dropped_flow_packets), np.mean(flow_delay), np.mean(avg_delay), np.std(avg_delay), num_flow_packets*packet_size/(t_max - t_min)]
 # df.to_csv('sim_log.csv', mode='a', index=False, header=False)
 
-df = pd.DataFrame(columns = ['cc_type', 'completed', 'dropped', 'mean_delay'])
-df.loc[len(df.index)] = [cc_type, len(completed_packets), len(dropped_packets), np.mean(delay_arr)]
+df = pd.DataFrame(columns = ['cc_type', 'completed', 'dropped', 'mean_delay', 'frac_dropped'])
+df.loc[len(df.index)] = [cc_type, len(completed_packets), len(dropped_packets), np.mean(delay_arr), len(dropped_packets)/(len(completed_packets)+len(dropped_packets))]
 df.to_csv('sim_all_flows.csv', mode='a', index=False, header=False)
