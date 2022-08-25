@@ -1,6 +1,10 @@
 # script to present results of simulation that reads the sim_log.csv file
 import pandas as pd
 import numpy as np
+import sys 
+args = sys.argv
+parameter_name = args[1]
+parameter_val = args[2]
 df = pd.read_csv('sim_all_flows.csv', header=None)
 df.columns=['cc_type', 'completed', 'dropped', 'mean_delay', 'frac_dropped']
 ekici_delay = []
@@ -14,5 +18,12 @@ for index, row in df.iterrows():
     elif(row['cc_type'] == 'prob-routing'):
         prob_routing_delay.append(row['mean_delay'])
         prob_routing_dropped.append(row['frac_dropped'])
-print(f"Average ekici delay : {np.mean(np.array(ekici_delay))*1e3:.3f} ms, average fraction of dropped pkts : {np.mean(np.array(ekici_dropped)):.3f}")
-print(f"Average prob_routing delay : {np.mean(np.array(prob_routing_delay))*1e3:.3f} ms, average fraction of dropped pkts : {np.mean(np.array(prob_routing_dropped)):.3f}")
+avg_ekici_delay = np.mean(np.array(ekici_delay))
+avg_prob_routing_delay = np.mean(np.array(prob_routing_delay))
+avg_fraction_ekici_drop = np.mean(np.array(ekici_dropped))
+avg_fraction_prob_routing_drop = np.mean(np.array(prob_routing_dropped))
+print(f"Average ekici delay : {avg_ekici_delay*1e3:.3f} ms, average fraction of dropped pkts : {avg_fraction_ekici_drop:.3f}")
+print(f"Average prob_routing delay : {avg_prob_routing_delay*1e3:.3f} ms, average fraction of dropped pkts : {avg_fraction_prob_routing_drop:.3f}")
+df2 = pd.DataFrame(columns=['parameter_name','parameter_val','ekici_delay', 'prob_routing_delay', 'ekici_dropped', 'prob_routing_dropped'])
+df2.loc[len(df2.index)] = [parameter_name, parameter_val, avg_ekici_delay, avg_prob_routing_delay, avg_fraction_ekici_drop, avg_fraction_prob_routing_drop]
+df2.to_csv(f"sim_all_flows_{parameter_name}.csv", index=False, header=False, mode='a')

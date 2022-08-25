@@ -8,12 +8,14 @@ import pandas as pd
 args = sys.argv
 cc_index = int(args[1])
 route_seed = int(args[2])
+p_preference = float(args[3])
+max_buff_length = int(args[4])
 route_state = np.random.RandomState(route_seed)
 decision_state = np.random.RandomState(0)
 # global constants
 alt = 600e3
-P = 6
-num_sats = 12
+P = 12
+num_sats = 24
 inclination = 90
 R = 6.378e6
 G = 6.674e-11
@@ -250,6 +252,7 @@ def direction_estimation(p1, s1, p2, s2):
         return ph
 def direction_enhancement(p1, s1, p2, s2):
     path_de = direction_estimation(p1, s1, p2, s2)
+    # print(path_de)
     lat_1 = s_to_lat(s1)
     lat_2 = s_to_lat(s2)
     if(sat_in_polar_region(s1)):
@@ -344,7 +347,7 @@ def congestion_control(node, path_enhanced, type=cc_type):
     # print(f"Max buffer length = {max_buff_length} packets")
     if(type == 'ekici'):
         node_idx = dir_to_node(path_enhanced.primary)
-        # print(f"Node idx : {node_idx}")
+        # print(f"Node idx : {node_idx}, path : {path_enhanced.primary}")
         buff_length = len(node.buffers[node_idx[0]][node_idx[1]])
         # print(f"Buffer length = {buff_length}")
         if(buff_length<=max_buff_length):
@@ -462,6 +465,7 @@ class node:
             packet.hops+=1
         elif(algo_type=='dra'):
             path_routed = direction_enhancement(self.p, self.s, packet.p2, packet.s2)
+            # print(f"{self.p, self.s}->{packet.p2, packet.s2} : {path_routed}")
             path_enhanced = congestion_control(self, path_routed)
             # include congestion control here 
             # takes path_enhanced, packet.hdr, destination as input
@@ -639,12 +643,13 @@ nodes = initialize_constellation(alt, P, num_sats)
 lamda = 1.34e4 #packets/s 
 t_stop = 100e-3
 t_feed = 40e-3
-num_packets = int(146)
-num_sources = int(20)
-p_min = 0
-p_max = P
-s_min = 0
-s_max = num_sats
+num_packets = int(100)
+num_flow_packets = 100
+num_sources = int(25)
+p_min = 2
+p_max = 7
+s_min = 3
+s_max = 9
 t_step = 10e-3
 print(f"Out rate = {tx_rate/packet_size*4:.2e} packets/s")
 print(f"In rate = {lamda:.2e} packets/s")
@@ -655,20 +660,6 @@ def feed_queue(num_sources, num_packets, t_feed):
         t_feed : arrivals at t_feed + (arrival_times)
     '''
     event_feed = []
-    # for node in nodes:
-    #     [p1, s1] = [node.p, node.s]
-    #     p2 = np.random.randint(0,P)
-    #     s2 = np.random.randint(0,num_sats)
-    #     # print(f"{p1,s1}->{p2,s2}")
-    #     inter_arrival_times = np.random.exponential(1/lamda, num_packets)
-    #     arrival_times = t_feed+np.cumsum(inter_arrival_times)
-    #     for t_arrival in arrival_times:
-    #         pkt = packet(p1, s1, p2, s2, t_arrival)
-    #         evnt = event(t_arrival, pkt, 'arrival')
-    #         event_feed.append(evnt)
-    #         pkt = packet(p2, s2, p1, s1, t_arrival)
-    #         evnt = event(t_arrival, pkt, 'arrival')
-    #         event_feed.append(evnt)
     for i in range(num_sources):
         [p1, p2] = route_state.randint(p_min, p_max, 2)
         [s1, s2] = route_state.randint(s_min, s_max, 2)
@@ -680,21 +671,21 @@ def feed_queue(num_sources, num_packets, t_feed):
             event_feed.append(evnt)
     return event_feed
 # # one dedicated flow
-# [p1,s1] = [2,9]
-# [p2,s2] = [5,2]
-# print(f"Dedicated flow : {p1,s1}->{p2,s2}, {num_flow_packets} packets")
-# t_start_flow = 50e-3
-# print(f"Start time : t = {t_start_flow:.3e}")
-# lamda_flow = 1e4
-# inter_arrival_times = route_state.exponential(1/lamda, num_flow_packets)
-# arrival_times = np.cumsum(inter_arrival_times) + t_start_flow
-# # print(arrival_times)
-# flow_feed = []
-# for t_arrival in arrival_times:
-#     pkt = packet(p1, s1, p2, s2, t_arrival, 'flow')
-#     evnt = event(t_arrival, pkt, 'arrival')
-#     flow_feed.append(evnt)
-# event_queue+=flow_feed
+[p1,s1] = [2,3]
+[p2,s2] = [7,9]
+print(f"Dedicated flow : {p1,s1}->{p2,s2}, {num_flow_packets} packets")
+t_start_flow = 35e-3
+print(f"Start time : t = {t_start_flow:.3e}")
+lamda_flow = lamda
+inter_arrival_times = route_state.exponential(1/lamda, num_flow_packets)
+arrival_times = np.cumsum(inter_arrival_times) + t_start_flow
+# print(arrival_times)
+flow_feed = []
+for t_arrival in arrival_times:
+    pkt = packet(p1, s1, p2, s2, t_arrival, 'flow')
+    evnt = event(t_arrival, pkt, 'arrival')
+    flow_feed.append(evnt)
+event_queue+=flow_feed
 event_queue+=feed_queue(num_sources, num_packets, t)
 # print(f"Initial packets at t={t*1e3:.3f} ms")
 while(t<=t_feed and event_queue):
@@ -743,7 +734,7 @@ print(f"Dropped packets : {len(dropped_packets)}")
 # plt.show()
 
 # avg_delay = np.array([pkt.delay for pkt in flow_packets])
-# # t_min = arrival_times[0]
+# t_min = arrival_times[0]
 # t_max = np.max(np.array([pkt.t_origin+pkt.delay]))
 # print(f"Mean delay : {np.mean(avg_delay)*1e3:.3f} ms, stddev : {np.std(avg_delay)*1e3:.3f} ms, num packets = {len(flow_packets)}")
 # avg_throughput = num_flow_packets*packet_size/(t_max - t_min)
