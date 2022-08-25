@@ -11,7 +11,7 @@ route_seed = int(args[2])
 p_preference = float(args[3])
 max_buff_length = int(args[4])
 route_state = np.random.RandomState(route_seed)
-decision_state = np.random.RandomState(0)
+decision_state = np.random.RandomState()
 # global constants
 alt = 600e3
 P = 12
@@ -35,7 +35,6 @@ print(f"Propagation delay ~= {l_alpha/c:.2e} s")
 print(f"t_prop/t_queue = {l_alpha/c/transmit_delay:.2f}")
 s_min = np.floor((90 - polar_region_boundary)/theta_intra_plane)+1
 # max_buff_length = int((l_alpha/c/transmit_delay))
-max_buff_length = 50
 drop_buff_length = 200
 # print(f"Long tail buffer : {drop_buff_length} packets")
 # print(f"Number of orbital planes = {P}, sats per plane = {num_sats}")
@@ -49,8 +48,8 @@ completed_packets = []
 flow_packets = []
 dropped_flow_packets = []
 dropped_packets = []
-p_preference = 0.9
 buffer_weight = 0.8
+print(f"max_buff_length = {max_buff_length}")
 t = 0
 algo_type = 'dra'
 cc_arr = ['ekici', '3-average', 'prob-routing']
@@ -357,7 +356,6 @@ def congestion_control(node, path_enhanced, type=cc_type):
             # print(f"Secondary : {node_idx}, completed packets : {len(completed_packets)}", end='\r')
             if(node_idx):
                 buff_length = len(node.buffers[node_idx[0]][node_idx[1]])
-                # print(f"Buffer length = {buff_length}")
                 if(buff_length<=max_buff_length):
                     return path_enhanced.secondary
                 else:
@@ -413,7 +411,8 @@ def congestion_control(node, path_enhanced, type=cc_type):
             return path_enhanced.primary
         else:
             if(b>=0):
-                p_primary = f_prob(a+1, b+1, p_preference)            
+                p_primary = f_prob(a+1, b+1, p_preference)
+                # print(f"p_primary = {p_primary}")            
             if(decision_state.random_sample()<=p_primary):
                 return path_enhanced.primary
             else:
@@ -641,11 +640,10 @@ def plot_nodes(nodes):
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
 lamda = 1.34e4 #packets/s 
-t_stop = 100e-3
-t_feed = 40e-3
+t_feed = 100e-3
 num_packets = int(100)
 num_flow_packets = 100
-num_sources = int(25)
+num_sources = int(20)
 p_min = 2
 p_max = 7
 s_min = 3
@@ -653,7 +651,7 @@ s_max = 9
 t_step = 10e-3
 print(f"Out rate = {tx_rate/packet_size*4:.2e} packets/s")
 print(f"In rate = {lamda:.2e} packets/s")
-print(f"t_stop = {t_stop*1e3:.1f} ms")
+print(f"t_feed = {t_feed*1e3:.1f} ms")
 def feed_queue(num_sources, num_packets, t_feed):
     '''
         num_packets : number of pkts sent from source to dest
@@ -719,7 +717,7 @@ for node in nodes:
         #     plt.show()
         #     i+=1
         # print(f"Lat {s_to_lat(node.s):.2f}, Long {ps_to_long(node.p, node.s):.2f}, Queue {node.average_queue_length:.2f}")
-        # print(f"{node.p, node.s}, Average queue length {node.average_queue_length:.3f}, max queue lengths : {max(queue_lengths)}")
+        print(f"{node.p, node.s}, Average queue length {node.average_queue_length:.3f}, max queue lengths : {max(queue_lengths)}")
         # print(arr)
 print(f"Completed packets : {len(completed_packets)}")
 delay_arr = np.array([pkt.delay for pkt in completed_packets])
