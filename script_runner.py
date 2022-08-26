@@ -52,8 +52,8 @@ j=0
 for str in str_array:
   print(f"Params : {parameter_name} {str}")
   for i in range(5):
-    # subprocess.call(f"python3 main_script_simulation.py 0 {i} {str}", shell=True)
-    subprocess.call(f"python3 main_script_simulation.py 2 {i} {str}", shell=True)
-  subprocess.call(f"python3 sim_analysis.py {parameter_name} {parameter_vals[j]}", shell=True)
+    subprocess.call(f"py main_script_simulation.py 0 {i} {str}", shell=True)
+    subprocess.call(f"py main_script_simulation.py 2 {i} {str}", shell=True)
+  subprocess.call(f"py sim_analysis.py {parameter_name} {parameter_vals[j]}", shell=True)
   os.remove('sim_all_flows.csv')
   j+=1
