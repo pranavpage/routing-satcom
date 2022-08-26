@@ -673,7 +673,7 @@ def feed_queue(num_sources, num_packets, t_feed):
 [p1,s1] = [2,3]
 [p2,s2] = [7,9]
 print(f"Dedicated flow : {p1,s1}->{p2,s2}, {num_flow_packets} packets")
-t_start_flow = 35e-3
+t_start_flow = 25e-3
 print(f"Start time : t = {t_start_flow:.3e}")
 lamda_flow = lamda
 inter_arrival_times = route_state.exponential(1/lamda, num_flow_packets)
@@ -720,29 +720,29 @@ for node in nodes:
         # print(f"Lat {s_to_lat(node.s):.2f}, Long {ps_to_long(node.p, node.s):.2f}, Queue {node.average_queue_length:.2f}")
         print(f"{node.p, node.s}, Average queue length {node.average_queue_length:.3f}, max queue lengths : {max(queue_lengths)}")
         # print(arr)
-print(f"Completed packets : {len(completed_packets)}")
-delay_arr = np.array([pkt.delay for pkt in completed_packets])
-print(f"Average delay = {np.mean(delay_arr)*1e3:.3f} ms")
-print(f"Dropped packets : {len(dropped_packets)}")
-# print(f"Completed flow packets : {len(flow_packets)}")
-# print(f"Dropped flow packets : {len(dropped_flow_packets)}")
-# flow_delay = np.array([pkt.delay for pkt in dropped_flow_packets])
-# print(f"Average time spent in system = {np.mean(flow_delay)*1e3:.3f} ms") 
+# print(f"Completed packets : {len(completed_packets)}")
+# delay_arr = np.array([pkt.delay for pkt in completed_packets])
+# print(f"Average delay = {np.mean(delay_arr)*1e3:.3f} ms")
+# print(f"Dropped packets : {len(dropped_packets)}")
+print(f"Completed flow packets : {len(flow_packets)}")
+print(f"Dropped flow packets : {len(dropped_flow_packets)}")
+flow_delay = np.array([pkt.delay for pkt in dropped_flow_packets])
+print(f"Average time spent in system = {np.mean(flow_delay)*1e3:.3f} ms") 
 # plot_nodes(nodes)
 # plt.savefig("images/queue_lengths.png")
 # plt.show()
 
-# avg_delay = np.array([pkt.delay for pkt in flow_packets])
-# t_min = arrival_times[0]
-# t_max = np.max(np.array([pkt.t_origin+pkt.delay]))
-# print(f"Mean delay : {np.mean(avg_delay)*1e3:.3f} ms, stddev : {np.std(avg_delay)*1e3:.3f} ms, num packets = {len(flow_packets)}")
-# avg_throughput = num_flow_packets*packet_size/(t_max - t_min)
-# print(f"Average throughput : {num_flow_packets*packet_size/(t_max - t_min):.3e} bps")
+avg_delay = np.array([pkt.delay for pkt in flow_packets])
+t_min = arrival_times[0]
+t_max = np.max(np.array([pkt.t_origin+pkt.delay]))
+print(f"Mean delay : {np.mean(avg_delay)*1e3:.3f} ms, stddev : {np.std(avg_delay)*1e3:.3f} ms, num packets = {len(flow_packets)}")
+avg_throughput = num_flow_packets*packet_size/(t_max - t_min)
+print(f"Average throughput : {num_flow_packets*packet_size/(t_max - t_min):.3e} bps")
 
-# df = pd.DataFrame(columns=['cc_type', 'flow_completed', 'dropped_flow', 'avg_flow_drop_time', 'mean_delay', 'stddev', 'avg_throughput'])
-# df.loc[len(df.index)] = [cc_type, len(flow_packets), len(dropped_flow_packets), np.mean(flow_delay), np.mean(avg_delay), np.std(avg_delay), num_flow_packets*packet_size/(t_max - t_min)]
-# df.to_csv('sim_log.csv', mode='a', index=False, header=False)
+df = pd.DataFrame(columns=['cc_type', 'flow_completed', 'dropped_flow','frac_dropped' ,'avg_flow_drop_time', 'mean_delay', 'stddev', 'avg_throughput'])
+df.loc[len(df.index)] = [cc_type, len(flow_packets), len(dropped_flow_packets),len(dropped_flow_packets)/(len(dropped_flow_packets) + len(flow_packets)), np.mean(flow_delay), np.mean(avg_delay), np.std(avg_delay), num_flow_packets*packet_size/(t_max - t_min)]
+df.to_csv('sim_single_flow.csv', mode='a', index=False, header=False)
 
-df = pd.DataFrame(columns = ['cc_type', 'completed', 'dropped', 'mean_delay', 'frac_dropped'])
-df.loc[len(df.index)] = [cc_type, len(completed_packets), len(dropped_packets), np.mean(delay_arr), len(dropped_packets)/(len(completed_packets)+len(dropped_packets))]
-df.to_csv('sim_all_flows.csv', mode='a', index=False, header=False)
+# df = pd.DataFrame(columns = ['cc_type', 'completed', 'dropped', 'mean_delay', 'frac_dropped'])
+# df.loc[len(df.index)] = [cc_type, len(completed_packets), len(dropped_packets), np.mean(delay_arr), len(dropped_packets)/(len(completed_packets)+len(dropped_packets))]
+# df.to_csv('sim_all_flows.csv', mode='a', index=False, header=False)

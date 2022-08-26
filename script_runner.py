@@ -4,20 +4,20 @@ import os, sys
 import numpy as np
 import pandas as pd
 args = sys.argv
-if(os.path.exists('sim_all_flows.csv')):
-  os.remove('sim_all_flows.csv')
+if(os.path.exists('sim_single_flow.csv')):
+  os.remove('sim_single_flow.csv')
 str_array = []
 parameter_name = args[1]
 p_preference_range = np.array([0.5,0.7, 0.9, 0.99, 0.999, 1.0])
 drop_buff_length_range = np.linspace(25, 300, 10)
-lamda_range = np.linspace(1e3, 4e3, 4)
+lamda_range = np.linspace(5e3, 2.5e4, 5)
 tx_rate_range = np.array([10e6, 25e6, 50e6, 100e6])
 buffer_weight_range = np.linspace(0.1, 1, 10)
 p_preference_default = 0.9
 drop_buff_length_default = 200
 lamda_default = 1.5e4
 tx_rate_default = 25e6
-buffer_weight_default = 0.8
+buffer_weight_default = 1
 if(args[1] == 'p_preference'):
   # change p_preference, keep everything else same
   parameter_vals = p_preference_range
@@ -52,8 +52,8 @@ j=0
 for str in str_array:
   print(f"Params : {parameter_name} {str}")
   for i in range(5):
-    # subprocess.call(f"python3 main_script_simulation.py 0 {i} {str}", shell=True)
+    subprocess.call(f"python3 main_script_simulation.py 0 {i} {str}", shell=True)
     subprocess.call(f"python3 main_script_simulation.py 2 {i} {str}", shell=True)
   subprocess.call(f"python3 sim_analysis.py {parameter_name} {parameter_vals[j]}", shell=True)
-  os.remove('sim_all_flows.csv')
+  os.remove('sim_single_flow.csv')
   j+=1
