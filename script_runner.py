@@ -4,10 +4,10 @@ import os, sys
 import numpy as np
 import pandas as pd
 args = sys.argv
-# os.remove('sim_all_flows.csv')
+os.remove('sim_all_flows.csv')
 str_array = []
 parameter_name = args[1]
-p_preference_range = np.linspace(0.5, 0.9, 5)
+p_preference_range = np.array([0.5,0.7, 0.9, 0.99, 0.999, 1.0])
 max_buff_length_range = np.linspace(25, 200, 10)
 lamda_range = np.linspace(0.5e4, 2.5e4, 5)
 tx_rate_range = np.array([10e6, 25e6, 50e6, 100e6])
@@ -43,7 +43,7 @@ elif(args[1] == 'tx_rate'):
 j=0
 for str in str_array:
   print(f"Params : {parameter_name} {str}")
-  for i in range(3):
+  for i in range(5):
     subprocess.call(f"python3 main_script_simulation.py 0 {i} {str}", shell=True)
     subprocess.call(f"python3 main_script_simulation.py 2 {i} {str}", shell=True)
   subprocess.call(f"python3 sim_analysis.py {parameter_name} {parameter_vals[j]}", shell=True)
