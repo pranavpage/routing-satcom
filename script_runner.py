@@ -4,10 +4,10 @@ import os, sys
 import numpy as np
 import pandas as pd
 args = sys.argv
-# os.remove('sim_all_flows.csv')
+os.remove('sim_all_flows.csv')
 str_array = []
 parameter_name = args[1]
-p_preference_range = np.linspace(0.5, 0.9, 5)
+p_preference_range = np.array([0.5,0.7, 0.9, 0.99, 0.999, 1.0])
 max_buff_length_range = np.linspace(25, 200, 10)
 lamda_range = np.linspace(1e3, 4e3, 4)
 tx_rate_range = np.array([10e6, 25e6, 50e6, 100e6])
