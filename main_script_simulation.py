@@ -50,6 +50,7 @@ completed_packets = []
 flow_packets = []
 dropped_flow_packets = []
 dropped_packets = []
+buffer_weight = 0.8
 print(f"max_buff_length = {max_buff_length}")
 t = 0
 algo_type = 'dra'
