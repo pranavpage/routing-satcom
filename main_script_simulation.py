@@ -9,9 +9,10 @@ args = sys.argv
 cc_index = int(args[1])
 route_seed = int(args[2])
 p_preference = float(args[3])
-max_buff_length = int(float(args[4]))
+drop_buff_length = int(float(args[4]))
 lamda = float(args[5])
 tx_rate = float(args[6])
+buffer_weight = float(args[7])
 route_state = np.random.RandomState(route_seed)
 decision_state = np.random.RandomState()
 # global constants
@@ -36,7 +37,7 @@ print(f"Propagation delay ~= {l_alpha/c:.2e} s")
 print(f"t_prop/t_queue = {l_alpha/c/transmit_delay:.2f}")
 s_min = np.floor((90 - polar_region_boundary)/theta_intra_plane)+1
 # max_buff_length = int((l_alpha/c/transmit_delay))
-drop_buff_length = 200
+max_buff_length = int(0.75*drop_buff_length)
 # print(f"Long tail buffer : {drop_buff_length} packets")
 # print(f"Number of orbital planes = {P}, sats per plane = {num_sats}")
 # print(f"Inter plane angle : {theta_inter_plane:.2f}")
@@ -49,7 +50,6 @@ completed_packets = []
 flow_packets = []
 dropped_flow_packets = []
 dropped_packets = []
-buffer_weight = 0.8
 print(f"max_buff_length = {max_buff_length}")
 t = 0
 algo_type = 'dra'
