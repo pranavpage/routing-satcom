@@ -9,7 +9,9 @@ args = sys.argv
 cc_index = int(args[1])
 route_seed = int(args[2])
 p_preference = float(args[3])
-max_buff_length = int(args[4])
+max_buff_length = int(float(args[4]))
+lamda = float(args[5])
+tx_rate = float(args[6])
 route_state = np.random.RandomState(route_seed)
 decision_state = np.random.RandomState()
 # global constants
@@ -22,7 +24,6 @@ G = 6.674e-11
 M = 5.972e24
 c = 2.998e8
 packet_size = 2**(10+3) #in bits
-tx_rate = 25e6 # in bits/s
 transmit_delay = packet_size/tx_rate
 # print(f"Packet size = {packet_size/8:.2e} bytes")
 # print(f"Transmit delay = {transmit_delay:.2e}")
@@ -639,8 +640,7 @@ def plot_nodes(nodes):
 # def gen_pkts():
 #     rates = [1]
 nodes = initialize_constellation(alt, P, num_sats)
-lamda = 1.34e4 #packets/s 
-t_feed = 100e-3
+t_feed = 50e-3
 num_packets = int(100)
 num_flow_packets = 100
 num_sources = int(20)
