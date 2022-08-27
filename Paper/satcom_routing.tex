@@ -1,0 +1,41 @@
+\documentclass[10pt,conference, draft, letterpaper]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\newcommand{\rough}[1]{{\color{red} #1}}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+		T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\title{Distributed Congestion Control in LEO Satellite Networks}
+%\author{\IEEEauthorblockN{ Pranav Page}
+%	\IEEEauthorblockA{\textit{Dept. of Electrical Engineering} \\
+%		\textit{IIT Bombay}\\
+%		Mumbai, India}
+%	\and 
+%	\IEEEauthorblockN{ Kaustubh Bhargao}
+%	\IEEEauthorblockA{\textit{Dept. of Electrical Engineering} \\
+%		\textit{IIT Bombay}\\
+%		Mumbai, India}
+%	\and 
+%	\IEEEauthorblockN{ Hrishikesh Baviskar}
+%	\IEEEauthorblockA{\textit{Dept. of Electrical Engineering} \\
+%		\textit{IIT Bombay}\\
+%		Mumbai, India
+%}}
+
+\begin{document}
+\maketitle	
+	\begin{abstract}
+Satellite communication in LEO constellations has become an emerging topic of interest. Due to the high number of LEO satellites in a typical constellation, a centralized algorithm for minimum-delay packet routing would incur significant signaling and computational overhead. We can exploit the deterministic topology of the satellite constellation to calculate the minimum-delay path between any two nodes in the satellite network, but that does not take into account the traffic information at the nodes along this minimum-delay path.\\
+We propose a distributed probabilistic congestion control scheme to minimise end-to-end delay. In the scheme, each satellite, while sending a packet to its neighbour, adds a header with a simple metric indicating its own congestion level. The decision to route packets is taken based on the latest traffic information received from the neighbours. We build this algorithm onto the Datagram Routing Algorithm, which provides the minimum delay path, and the decision for the next hop is taken by the congestion control algorithm. We compare the proposed congestion control mechanism with the existing congestion control used by the DRA, and show improvements over the same.
+	\end{abstract}
+\section{Introduction}
+\section{Related works}
+\section{System Model and Problem Formulation}
+\section{Algorithms}
+\section{Simulation setup}
+\section{Results}
+\section{Conclusions and Future Work}
+\end{document}
