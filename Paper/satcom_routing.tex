@@ -4,12 +4,18 @@
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
+\usepackage{gensymb}
 \usepackage{xcolor}
 \newcommand{\rough}[1]{{\color{red} #1}}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
 		T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \title{Distributed Congestion Control in LEO Satellite Networks}
 %\author{\IEEEauthorblockN{ Pranav Page}
+%	\IEEEauthorblockA{\textit{Dept. of Electrical Engineering} \\
+%		\textit{IIT Bombay}\\
+%		Mumbai, India}
+%	\and
+%	\IEEEauthorblockN{Gaurav Kasbekar}
 %	\IEEEauthorblockA{\textit{Dept. of Electrical Engineering} \\
 %		\textit{IIT Bombay}\\
 %		Mumbai, India}
@@ -41,7 +47,22 @@ A distributed congestion control algorithm that can deal with uneven node conges
 \rough{Why is it hard?}\\
 The problem of choosing an optimum schedule which minimizes the total end-to-end delay for a given set of packets has been shown to be NP-hard in \cite{opt_schedule}. Thus, heuristics-based approaches have been used to tackle this problem. In particular, \cite{ekici-datagram}\cite{ekici-dist} use a basic threshold on the outgoing buffer to determine whether the link is congested. The DRA does not use local congestion information to reroute packets. We address this problem by using the packet headers as a way of conveying traffic information in the form of a single metric indicating the congestion level, and then probabilistically choosing the next hop for a packet. We simulate a typical LEO satellite constellation, and compare the performance of the DRA and our own algorithm in terms of end-to-end delay and packet drops. \rough{Add figures of improvement. Add breakdown of the paper(?)}
 \section{Related works}
-\section{System Model and Problem Formulation}
+\rough{Do last}
+\section{System Model}
+The Low Earth Orbit satellite constellation considered is a Walker star constellation, with satellites in polar orbits. The setup and terminology used is based on the terminology used in \cite{ekici-datagram}. There are $N$ orbital planes, with $M$ satellites per plane. Thus, the angular spacing between the planes is ${360^\degree}/{2N}$. \rough{(Add figure of satellite constellation)}. All satellites are at a fixed altitude $h$ from the ground, thus forming an orbital shell. We consider the network to be comprised of \textit{virtual nodes}, as in \cite{ekici-datagram}, with different satellites occupying the virtual nodes at different instances of time. The virtual nodes are fixed in location with respect to the ground, and are filled up by the nearest satellite. Each virtual node location can be expressed in terms of the plane number $p$ and the satellite number $s$, $0\leq p \leq N-1$, $0\leq s \leq M-1$. Each node in the network can be represented as a tuple $(p,s)$. This model does not deal with the mobility of satellites, and can be used to perform routing based entirely on the position of the virtual nodes. \\
+As this is a Walker star constellation, each node has two neighbours in the same orbital plane, i.e, \textit{up} and \textit{down}, as well has two neighbours in different orbital planes, i.e, \textit{left} and \textit{right}. The direction \textit{up} is the direction of movement of the satellites in the orbits, while the direction \textit{right} is the direction East from the prime meridian (longitude $0^\degree$). \rough{(Add figure denoting neighbours)}\\
+Due to the circular arrangement of orbital planes, there exist counter-rotating seams where a satellite moving north has have a neighbour to its left who is moving south. Some works operate with these inter-plane ISLs disabled, with high Doppler effects and difficulties in antenna pointing as justifications, but we have considered advances in beamforming and antenna tracking, and have decided to use these links across seams as operational links. Inter-plane ISLs in the polar regions, however, are considered to be shut off due to the change in the orientation of neighbours. \rough{(Add figure denoting switching of left and right neighbours)}. Polar regions are defined using a latitude threshold $\theta_{\text{polar}}$, with $\theta_{\text{polar}} = 75^\degree$ taken as the default boundary. The latitudes above $\theta_{\text{polar}}$ are considered to be in the polar regions.\\
+The lengths of the intra-plane ISLs are the same, as nodes are equally spaced in the orbital planes. For an orbital radius of $R$, the length of an intra-plane ISL $L_v$ is given by \ref{L_v}, while that of an inter-plane ISL situated at latitude $\theta$ is given by \ref{L_h}
+\begin{equation}
+\label{L_v}
+	L_v = R\sqrt{2(1-\cos(360^\degree/M))}
+\end{equation}
+\begin{equation}
+	\label{L_h}
+	L_h = R\cos{\theta}\sqrt{2(1-\cos(360^\degree/2N))}
+\end{equation}
+As seen in \rough{constellation figure}, the inter-plane ISLs are shorter towards the poles and longer towards the equator.
+\section{Problem Formulation}
 \section{Algorithms}
 \section{Simulation setup}
 \section{Results}
