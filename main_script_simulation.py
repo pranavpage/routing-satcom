@@ -13,6 +13,7 @@ drop_buff_length = int(float(args[4]))
 lamda = float(args[5])
 tx_rate = float(args[6])
 buffer_weight = float(args[7])
+traffic_nghbr_weight = float(args[8])
 route_state = np.random.RandomState(route_seed)
 decision_state = np.random.RandomState()
 # global constants
@@ -57,6 +58,7 @@ algo_type = 'dra'
 cc_arr = ['ekici', '3-average', 'prob-routing']
 cc_type = cc_arr[cc_index]
 print(f"Congestion control type : {cc_type}")
+print(f"Traffic ngbhr weight : {traffic_nghbr_weight:.2f}")
 class min_path:
     def __init__(self, dv, dh, nv, nh):
         self.dv = dv 
@@ -605,9 +607,10 @@ def traffic_info(node, packet):
     # given a particular node and its 4 neighbours, generate a metric to send along with the packet
     neighbours = give_neighbours(node.p, node.s)
     dest = [packet.next_hop_p, packet.next_hop_s]
-    weights = [[1,1],[1,1]]
+    ngbhr_weights = [[traffic_nghbr_weight,traffic_nghbr_weight],[traffic_nghbr_weight,traffic_nghbr_weight]]
     dir = [0,0]
-    central_weights = [[1,1], [1,1]]
+    traffic_central_weight = 1-traffic_nghbr_weight
+    central_weights = [[traffic_central_weight,traffic_central_weight], [traffic_central_weight,traffic_central_weight]]
     metric = 0
     for i in range(2):
         for j in range(2):
@@ -617,13 +620,13 @@ def traffic_info(node, packet):
             else:
                 # add to metric
                 ql = node.neighbour_queue_lengths[i][j]
-                val1 = ql*weights[i][j]
+                val1 = ql*ngbhr_weights[i][j]
                 val2 = len(node.buffers[i][j])*central_weights[i][j]
                 metric+=val2
                 if(ql>0):
                     metric += (val1)
     # metric += len(node.queue)*central_weight
-    metric/=(sum(np.array(central_weights).flatten()) + sum(np.array(weights).flatten()))
+    metric/=(sum(np.array(central_weights).flatten()) + sum(np.array(ngbhr_weights).flatten()))
     # if([node.p, node.s] == [2,9]):
     #     print(f"{node.p, node.s, node.neighbour_queue_lengths}, {packet.next_hop_p, packet.next_hop_s}, {metric}")
     return metric, dir

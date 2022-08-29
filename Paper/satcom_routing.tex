@@ -1,4 +1,4 @@
-\documentclass[10pt,conference, draft, letterpaper]{IEEEtran}
+\documentclass[10pt,conference, draftcls, letterpaper]{IEEEtran}
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
@@ -6,6 +6,7 @@
 \usepackage{textcomp}
 \usepackage{gensymb}
 \usepackage{xcolor}
+\graphicspath{{./images/}}
 \newcommand{\rough}[1]{{\color{red} #1}}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
 		T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -53,13 +54,13 @@ The Low Earth Orbit satellite constellation considered is a Walker star constell
 As this is a Walker star constellation, each node has two neighbours in the same orbital plane, i.e, \textit{up} and \textit{down}, as well has two neighbours in different orbital planes, i.e, \textit{left} and \textit{right}. The direction \textit{up} is the direction of movement of the satellites in the orbits, while the direction \textit{right} is the direction East from the prime meridian (longitude $0^\degree$). \rough{(Add figure denoting neighbours)}\\
 Due to the circular arrangement of orbital planes, there exist counter-rotating seams where a satellite moving north has have a neighbour to its left who is moving south. Some works operate with these inter-plane ISLs disabled, with high Doppler effects and difficulties in antenna pointing as justifications, but we have considered advances in beamforming and antenna tracking, and have decided to use these links across seams as operational links. Inter-plane ISLs in the polar regions, however, are considered to be shut off due to the change in the orientation of neighbours. \rough{(Add figure denoting switching of left and right neighbours)}. Polar regions are defined using a latitude threshold $\theta_{\text{polar}}$, with $\theta_{\text{polar}} = 75^\degree$ taken as the default boundary. The latitudes above $\theta_{\text{polar}}$ are considered to be in the polar regions.\\
 Each node has four output buffers, corresponding to its four neighbours. We assume that on one link, reception and transmission can take place simultaneously. Thus, all four antennas can be transmitting and receiving simultaneously.\\
-The lengths of the intra-plane ISLs are the same, as nodes are equally spaced in the orbital planes. For an orbital radius of $R$, the length of an intra-plane ISL $L_v$ is given by \ref{L_v}, while that of an inter-plane ISL situated at latitude $\theta$ is given by \ref{L_h}
+The lengths of the intra-plane ISLs are the same, as nodes are equally spaced in the orbital planes. For an orbital radius of $R$, the length of an intra-plane ISL $L_v$ is given by \eqref{eq:L_v}, while that of an inter-plane ISL situated at latitude $\theta$ is given by \eqref{eq:L_h}
 \begin{equation}
-\label{L_v}
+\label{eq:L_v}
 	L_v = R\sqrt{2(1-\cos(360^\degree/M))}
 \end{equation}
 \begin{equation}
-	\label{L_h}
+	\label{eq:L_h}
 	L_h = R\cos{\theta}\sqrt{2(1-\cos(360^\degree/2N))}
 \end{equation}
 As seen in \rough{constellation figure}, the inter-plane ISLs are shorter towards the poles and longer towards the equator.
@@ -67,8 +68,57 @@ As seen in \rough{constellation figure}, the inter-plane ISLs are shorter toward
 Now that the system model has been defined, the problem statement reduces to the following : Given the topology of the network of nodes and a destination node, without any global knowledge of the congestion level at each node, pick the next hop for the packet from the source node in a way that the end-to-end delay ($d_{\text{prop}}+d_{\text{queueing}}$) is minimized.\\
 Mathematically, \rough{(Add mathematical expression for the path)}
 \section{Algorithms}
+\rough{(Briefly explain DRA direction estimation, DRA direction enhancement, DRA congestion control)}\\
+\subsection{Routing}
+\subsubsection{DRA direction estimation}
+DRA has three steps, namely direction estimation, direction enhancement and congestion control. In direction estimation, the path from source to destination with the minimum number of hops is chosen. Two different paths are considered, $P^H$ and $P^V$, where $P^H$ is the optimal among all paths which do not cross the polar regions, and $P^V$ is the optimal path among all paths which do cross the polar regions. This phase chooses which path ($P^H$ or $P^V$) would be best by comparing the number of hops in both. Each path can be described by four metrics, namely $d_h$, $n_h$, $d_v$, $n_v$ where ($d_h$, $n_h$) describe the direction in the horizontal direction and the number of horizontal hops respectively. In the end, the two paths are compared, and the path with minimum $(n_v + n_h)$ is returned.\\
+\subsubsection{DRA direction enhancement}
+This phase actually takes into account the unequal interplane ISLs in the network, and the transport of packets in the polar region. In this phase, the directions given by $d_h$ and $d_v$ are labelled primary or secondary, depending on the position of the packet source and destination. The decision of whether to name a direction as primary or secondary is influenced by factors like the latitudes of the two nodes, the number of horizontal hops needed, the possibility of sending the packet through a path closer to the polar regions, thus taking the horizontal hops closer to the poles. The primary and secondary directions are passed to the congestion control algorithm.\\
+\subsection{Congestion control}
+\subsubsection{DRA congestion control}
+In DRA, the decision to send packets in the primary or secondary directions is taken on the basis of the congestion level of the node's output buffers in the respective directions. If the output buffer in the primary direction has less than $N_{threshold}$ packets, then the packet is sent in the primary direction. Otherwise, if the secondary direction exists (might not exit for nodes in polar regions), and the output buffer in the secondary direction has less than $N_{threshold}$ packets, then the packet is sent in the secondary direction. If the buffers in both primary and secondary directions have buffers of size greater than $N_{threshold}$, then the packet is sent in the primary direction.
+\subsubsection{New congestion control}
+
+The proposed congestion control algorithm takes advantage of the dense network of nodes to transmit traffic information about the node to its neighbours. With each packet sent to its neighbour, the node adds a traffic metric to the header of the packet. Similarly, when a packet is received, the traffic metric in the header is extracted and stored in each node. Thus, each node maintains an output buffer and the latest traffic metric received for each of its neighbours. The decision to be taken involves the lengths of the output buffers as well as the traffic metric in each of the two directions.\\
+\rough{calculation of the traffic metric}\\
+The traffic metric to be sent has to be indicative of the congestion level of the node. A weighted sum is used
+\begin{equation}
+	m_{node} = \sum_{i=1, i\neq j}^4 w_{neighbour}m_{node,i} + (1-w_{neighbour})N_{node, i}
+\end{equation}
+where $m_{node}$ is the traffic metric to be sent from $node$ to the neighbour $j$, $w_{neighbour}\in [0,1]$ is the weight given to the values of the traffic metric of the neighbours of the $node$, $N_{node,i}$ is the length of the output buffer in $node$ towards neighbour $i$, and $m_{node, i}$ is the latest traffic metric received by $node$ from neighbour $i$ \\
+\rough{probabilistic decision making}\\
+Let $primary$ and $secondary$ be the primary and secondary directions given by the direction enhancement algorithm. If $N_{node, primary}$ and $N_{node,secondary}$ are the output buffer lengths in the respective directions, and $m_{node, primary}$ , $m_{node, secondary}$ are the traffic metrics received from the primary and secondary directions and stored in $node$, then the following congestion level metrics are calculated
+\begin{equation}
+	c_{i} = w_{buffer}N_{node,i} + (1-w_{buffer})m_{node, i}
+\end{equation}
+for $i \in \{primary, secondary\}$, $w_{buffer}\in [0,1]$. A probability distribution is chosen such that 
+\begin{equation}
+	P(\text{choose primary}) = \dfrac{(c_{s}+1)p_{preference}}{c_{p}+1 + (c_{s} - c_{p})p_{preference}}
+\end{equation}
+where $c_s = c_{secondary}$, $c_p = c_{primary}$, and $p_{preference}$ is the probability that primary is chosen when $c_s = c_p$. The probabilistic nature of this choice ensures that a single direction is not clogged, which can happen in the DRA congestion control algorithm. If $c_p$ increases, then the probability of choosing the secondary direction increases. Preference is still given to the primary direction. \rough{(Add a heat map for probability vs $c_p$, $c_s$)}
 \section{Simulation setup}
+The simulation was done in Python 3. A constellation with 12 polar orbital planes and 24 satellites per plane was used. Thus, $N=12$ and $M=24$ were the parameters for the constellation, with an inclination of $90^\degree$ and an altitude of 600 km. A discrete event simulator was built which executed events in order of lowest time of execution. \\
+A portion of the network was simulated, bounded by the nodes $(2,3), (7,3), (7,9), (2,9)$, consisting of 42 nodes. The simulation was fed with Poisson arrivals with rate $\lambda_{in}$. After every $t_{step}$ seconds, $n_{pairs}$ source-destination pairs were chosen uniformly randomly from the 42 nodes, and $n_{packets}$ packets were queued up for these pairs with exponential inter-arrival times. Thus, packets were fed into the network for some time, to congest most nodes in the network. Then transmissions were stopped, and the network was allowed to decongest. \\
+The inter-satellite links were chosen to have a transmission rate of $r_{tx} = 25$Mbps. The packet size was chosen to be 1kB, which made the transmission delay to be 0.327 ms. Each output buffer was chosen to be of the same size, $N_{buffer} = 200$ packets. The threshold $N_{threshold}$ was chosen to be $N_{threshold} = 150$. \\
+\rough{(Add random seeds)}
 \section{Results}
+\begin{figure}
+	\includegraphics[width=0.95\columnwidth]{all_flows_delay_with_lamda.png}
+	\caption{Comparison of end-to-end delay variation with $\lambda_{in}$}
+	\label{fig:lamda_var}
+\end{figure}
+\begin{figure}
+	\includegraphics[width=0.95\columnwidth]{all_flows_delay_with_buffer_weight.png}
+	\caption{Comparison of end-to-end delay variation with $w_{buffer}$}
+	\label{fig:buffer_weight_var}
+\end{figure}
+The probabilistic routing algorithm performs better than the DRA in terms of average end-to-end delay for higher input rates ($\lambda_{in}$) to the network (Figure \ref{fig:lamda_var}). \rough{(Add interpretation of results)}.\\
+A different experiment was also performed, with only packets in a single flow analysed for end-to-end delay. This was done to check the difference in average end-to-end delay for packets which originated from the same source node and ended in the same destination node. The source node was $(2,3)$ and the destination node was $(7,9)$\\
+\begin{figure}
+	\includegraphics[width=0.95\columnwidth]{single_flow_delay_with_lamda.png}
+	\caption{Comparison of end-to-end delay variation with $\lambda_{in}$ for a single flow}
+	\label{fig:single_lamda_var}
+\end{figure} 
 \section{Conclusions and Future Work}
 \bibliography{refs.bib}
 \bibliographystyle{ieeetr}
