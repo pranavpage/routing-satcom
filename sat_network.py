@@ -7,7 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 alt = 600e3 #600 km above the earth
 P = 12 #number of orbital planes
 h = alt*np.ones(P) #altitude
-num_sats = 25 #satellites per plane 
+num_sats = 24 #satellites per plane 
 inclination = 90
 #set up a network of virtual nodes
 R = 6.378e6
@@ -128,9 +128,10 @@ def plot_constellation(sats, dir_sats, num):
     for i in range(len(sats)):
         polar_coords[i, :] = [sats[i].latitude, sats[i].longitude]
         polar_map[i,:] = sat_in_polar_region(sats[i].sat_idx)
-    ax2.scatter(polar_coords[:,1], polar_coords[:, 0], alpha=0.5, s=polar_map*20, c='c', label='polar region')
-    ax2.scatter(polar_coords[:,1], polar_coords[:, 0], alpha=0.5, s=(1-polar_map)*20, c='k')
-    ax2.plot( [0, 0],[np.pi/2, -np.pi/2], '--r')
+    ax2.scatter(polar_coords[:,1], polar_coords[:, 0], alpha=0.7, s=polar_map*20, c='c', label='polar region nodes')
+    ax2.scatter(polar_coords[:,1], polar_coords[:, 0], alpha=0.7, s=(1-polar_map)*20, c='k', label = 'nodes')
+    ax2.plot( [np.radians(-7.5), np.radians(-7.5)],[np.pi/2, -np.pi/2], '--r', label='seam')
+    ax2.plot( [np.radians(180-7.5), np.radians(180-7.5)],[np.pi/2, -np.pi/2], '--r')
     return 0
 
 planes, sats, dir_sats = initialize_constellation(alt, P, num_sats, inclination)
@@ -562,8 +563,8 @@ if(__name__=='__main__'):
             nodes_list.append(node)
         # plot_path(nodes_list, num=j)
         # plt.title(f"({p1}, {s1})->({p2}, {s2}), {pkt.hops} hops")
-        # plt.legend(bbox_to_anchor=(0.75,1.25), loc="upper left")
-        # plt.savefig(f"images/new_path_routed_{j}.png")
+        plt.legend(bbox_to_anchor=(0.2,1.45), loc="upper left", prop={'size':13})
+        plt.savefig(f"images/constellation.png")
         print(nodes_list)
         print(f"Seed={j}")
     print(f"Failures = {failures}")
